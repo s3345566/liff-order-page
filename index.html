@@ -400,7 +400,6 @@
       <button class="btn-save-primary" onclick="saveNotice()">儲存並發布公告</button>
     </div>
 
-    <!-- ======== 取餐時段管理 ======== -->
     <div class="admin-section">
       <h3>🕐 管理取餐時段</h3>
       <div class="admin-form-group">
@@ -491,9 +490,6 @@
     const LIFF_ID = "2011112664-289oMrlD";
     const OFFICIAL_ACCOUNT_ID = "473lfggk";
 
-    // ============================================================
-    // 預設資料
-    // ============================================================
     const defaultNotice = "🍱 請於早上九點前預訂，送出訂單後將自動傳送訂購細項，等待回覆確認即完成預訂！";
 
     const defaultProducts = [{
@@ -513,16 +509,12 @@
       img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300"
     }];
 
-    // ⭐ 預設取餐時段（你指定的三個）
     const defaultTimeSlots = [
       "11:30 - 12:00",
       "12:00 - 12:30",
       "12:30 - 13:00"
     ];
 
-    // ============================================================
-    // 全域變數
-    // ============================================================
     let products = [];
     let timeSlots = [];
     let clickCount = 0;
@@ -540,7 +532,6 @@
       document.getElementById('notice-display').innerText = savedNotice || defaultNotice;
       document.getElementById('input-notice').value = savedNotice || defaultNotice;
 
-      // 載入時段（localStorage 若無資料則使用預設三個）
       const savedTimeSlots = localStorage.getItem('bento_timeslots');
       timeSlots = savedTimeSlots ? JSON.parse(savedTimeSlots) : defaultTimeSlots;
 
@@ -577,13 +568,13 @@
         })
         .catch((err) => {
           console.error('❌ LIFF 初始化失敗:', err);
-          statusEl.innerText = '⚠️ LIFF 初始化失敗，將使用備用方案';
+          statusEl.innerText = '⚠️ LIFF 初始化失敗';
           liffReady = false;
         });
     }
 
     // ============================================================
-    // 取餐時段管理（⭐ 新功能）
+    // 取餐時段管理
     // ============================================================
     function renderTimeSlots() {
       const container = document.getElementById('time-list-display');
@@ -627,14 +618,8 @@
     function addTimeSlot() {
       const input = document.getElementById('input-new-time');
       const value = input.value.trim();
-      if (!value) {
-        alert('請輸入時段！');
-        return;
-      }
-      if (timeSlots.includes(value)) {
-        alert('此時段已存在！');
-        return;
-      }
+      if (!value) { alert('請輸入時段！'); return; }
+      if (timeSlots.includes(value)) { alert('此時段已存在！'); return; }
       timeSlots.push(value);
       localStorage.setItem('bento_timeslots', JSON.stringify(timeSlots));
       input.value = '';
@@ -870,7 +855,7 @@
     }
 
     // ============================================================
-    // 建立 Flex Message 卡片（仿圖1樣式）
+    // 建立 Flex Message 卡片（強制卡片格式）
     // ============================================================
     function buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, total) {
       let totalQty = 0;
@@ -883,7 +868,7 @@
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: match[1], flex: 3, size: "sm", color: "#4a423a" },
+              { type: "text", text: match[1], flex: 4, size: "sm", color: "#4a423a" },
               { type: "text", text: `× ${match[2]}`, flex: 1, align: "center", size: "sm", color: "#6b513e" },
               { type: "text", text: `$${match[3]}`, flex: 1, align: "end", size: "sm", color: "#6b513e", weight: "bold" }
             ]
@@ -892,43 +877,22 @@
         return null;
       }).filter(item => item !== null);
 
-      // 如果商品太多，只顯示前 5 項，其餘用文字表示
-      let displayItems = itemContents;
-      let extraCount = 0;
-      if (itemContents.length > 5) {
-        displayItems = itemContents.slice(0, 5);
-        extraCount = itemContents.length - 5;
-      }
+      // 建立卡片內容
+      const bodyContents = [];
 
-      const bodyContents = [
+      // 標題區
+      bodyContents.push(
         { type: "text", text: "🍱 日和便當 · 手作餐盒", weight: "bold", size: "lg", color: "#6b513e" },
         { type: "text", text: "餐盒預購明細", color: "#a88367", size: "sm" },
-        { type: "separator", margin: "md", color: "#e8e2d8" },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "品項", size: "xs", color: "#8c8275", flex: 3 },
-            { type: "text", text: "數量", size: "xs", color: "#8c8275", flex: 1, align: "center" },
-            { type: "text", text: "價格", size: "xs", color: "#8c8275", flex: 1, align: "end" }
-          ]
-        }
-      ];
+        { type: "separator", margin: "md", color: "#e8e2d8" }
+      );
 
-      displayItems.forEach((item) => {
+      // 商品清單（不加標題列，直接顯示商品）
+      itemContents.forEach((item) => {
         bodyContents.push(item);
       });
 
-      if (extraCount > 0) {
-        bodyContents.push({
-          type: "text",
-          text: `... 及其他 ${extraCount} 項`,
-          size: "sm",
-          color: "#8c8275",
-          align: "center"
-        });
-      }
-
+      // 總計
       bodyContents.push(
         { type: "separator", margin: "md", color: "#e8e2d8" },
         {
@@ -975,7 +939,7 @@
             type: "box",
             layout: "vertical",
             contents: [
-              { type: "text", text: "訂單編號自動產生", size: "xs", color: "#aaaaaa", align: "center" }
+              { type: "text", text: "📋 訂單已成立", size: "xs", color: "#aaaaaa", align: "center" }
             ]
           }
         }
@@ -983,7 +947,7 @@
     }
 
     // ============================================================
-    // 發送訂單到 LINE
+    // 發送訂單到 LINE（強制卡片）
     // ============================================================
     async function sendToLine() {
       const name = document.getElementById('name').value.trim();
@@ -1019,30 +983,41 @@
       btn.innerText = '⏳ 傳送中...';
 
       try {
-        if (liffReady && liff.isLoggedIn() && liff.isInClient()) {
-          const flexMessage = buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, totalAmount);
-          await liff.sendMessages([flexMessage]);
-          alert('✅ 訂單已成功傳送！');
-          clearOrder();
-        } else {
-          // 備用方案
-          let message =
-            `【日和便當 · 餐盒預訂單】\n────────────────\n` +
-            `姓名：${name}\n電話：${phone}\n`;
-          if (memberPhone) message += `會員電話：${memberPhone}\n`;
-          message += `取餐日期：${date}\n取餐時間：${time}\n`;
-          if (note) message += `備註：${note}\n`;
-          message +=
-            `────────────────\n訂購品項：\n${orderItems}` +
-            `────────────────\n總金額：NT$ ${totalAmount}\n感謝您的訂購 ❤️`;
-
-          const encodedMsg = encodeURIComponent(message);
-          window.open(`https://line.me/R/oaMessage/@${OFFICIAL_ACCOUNT_ID}/?${encodedMsg}`, '_blank');
-          alert('✅ 已開啟傳送頁面！');
+        // 強制使用 LIFF 發送 Flex Message
+        if (!liffReady) {
+          alert('⚠️ LIFF 尚未初始化完成，請稍後再試！');
+          btn.disabled = false;
+          btn.innerText = '📤 送出餐盒預訂 (LINE)';
+          return;
         }
+
+        if (!liff.isLoggedIn()) {
+          alert('🔑 請先登入 LINE！');
+          liff.login();
+          btn.disabled = false;
+          btn.innerText = '📤 送出餐盒預訂 (LINE)';
+          return;
+        }
+
+        if (!liff.isInClient()) {
+          alert('📱 請在 LINE 應用程式內開啟此頁面！');
+          btn.disabled = false;
+          btn.innerText = '📤 送出餐盒預訂 (LINE)';
+          return;
+        }
+
+        // 建立 Flex Message 卡片
+        const flexMessage = buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, totalAmount);
+
+        // 發送卡片
+        await liff.sendMessages([flexMessage]);
+
+        alert('✅ 訂單卡片已成功傳送！');
+        clearOrder();
+
       } catch (error) {
         console.error('❌ 發送失敗:', error);
-        alert('⚠️ 發送失敗，請重試。');
+        alert('❌ 發送失敗，請重試！\n錯誤訊息：' + error.message);
       } finally {
         btn.disabled = false;
         btn.innerText = '📤 送出餐盒預訂 (LINE)';
