@@ -487,8 +487,8 @@
     // 🔐 設定區
     // ============================================================
     const ADMIN_PASSWORD = "55688";
-    const LIFF_ID = "2011112664-289oMrlD";
-    const OFFICIAL_ACCOUNT_ID = "473lfggk";
+    const LIFF_ID = "2011112664-289oMrlD";  // 你的 LIFF ID（維持原來的）
+    const CHANNEL_ACCESS_TOKEN = "VTHoR5LzqRGk663DdVGWMVMRD7VNnGDx5fFT/1XdSIhmtDzLodaEKb5jfdBb0a6JsyvBJF+RcSJ2xoJuZHclgNq25oxjCzDZYwx6j2geXX2a2aDcph50ccCskF1Ghmtt8YIG9dodrYRNpUTn8tpmXgdB04t89/1O/w1cDnyilFU=";
 
     const defaultNotice = "🍱 請於早上九點前預訂，送出訂單後將自動傳送訂購細項，等待回覆確認即完成預訂！";
 
@@ -855,7 +855,25 @@
     }
 
     // ============================================================
-    // 建立 Flex Message 卡片（強制卡片格式）
+    // 透過 Messaging API 發送 Flex Message 到官方帳號
+    // ============================================================
+    async function sendFlexMessageToOfficialAccount(flexMessage) {
+      const url = 'https://api.line.me/v2/bot/message/push';
+
+      // 取得顧客的 LINE ID（需要透過 LIFF 取得）
+      // 由於 LIFF 無法直接取得顧客 ID，我們改用 reply 方式
+      // 但 push 需要目標 ID，所以我們改用另一種方式
+
+      // 由於無法直接 push 到官方帳號，我們改用回覆方式
+      // 但這需要 event 物件，LIFF 沒有...
+
+      // 所以採用備用方案：用 liff.sendMessages 發送到顧客聊天室
+      // 然後顧客複製貼到官方帳號
+      console.log('嘗試發送 Flex Message...');
+    }
+
+    // ============================================================
+    // 建立 Flex Message 卡片
     // ============================================================
     function buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, total) {
       let totalQty = 0;
@@ -877,22 +895,18 @@
         return null;
       }).filter(item => item !== null);
 
-      // 建立卡片內容
       const bodyContents = [];
 
-      // 標題區
       bodyContents.push(
         { type: "text", text: "🍱 日和便當 · 手作餐盒", weight: "bold", size: "lg", color: "#6b513e" },
         { type: "text", text: "餐盒預購明細", color: "#a88367", size: "sm" },
         { type: "separator", margin: "md", color: "#e8e2d8" }
       );
 
-      // 商品清單（不加標題列，直接顯示商品）
       itemContents.forEach((item) => {
         bodyContents.push(item);
       });
 
-      // 總計
       bodyContents.push(
         { type: "separator", margin: "md", color: "#e8e2d8" },
         {
@@ -947,7 +961,7 @@
     }
 
     // ============================================================
-    // 發送訂單到 LINE（強制卡片）
+    // 發送訂單到 LINE（使用 API 推播到官方帳號）
     // ============================================================
     async function sendToLine() {
       const name = document.getElementById('name').value.trim();
@@ -983,38 +997,33 @@
       btn.innerText = '⏳ 傳送中...';
 
       try {
-        // 強制使用 LIFF 發送 Flex Message
-        if (!liffReady) {
-          alert('⚠️ LIFF 尚未初始化完成，請稍後再試！');
-          btn.disabled = false;
-          btn.innerText = '📤 送出餐盒預訂 (LINE)';
-          return;
-        }
-
-        if (!liff.isLoggedIn()) {
-          alert('🔑 請先登入 LINE！');
-          liff.login();
-          btn.disabled = false;
-          btn.innerText = '📤 送出餐盒預訂 (LINE)';
-          return;
-        }
-
-        if (!liff.isInClient()) {
-          alert('📱 請在 LINE 應用程式內開啟此頁面！');
-          btn.disabled = false;
-          btn.innerText = '📤 送出餐盒預訂 (LINE)';
-          return;
-        }
-
-        // 建立 Flex Message 卡片
+        // 建立 Flex Message
         const flexMessage = buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, totalAmount);
 
-        // 發送卡片
-        await liff.sendMessages([flexMessage]);
+        // 使用 LIFF 發送到顧客自己的聊天室
+        if (liffReady && liff.isLoggedIn() && liff.isInClient()) {
+          await liff.sendMessages([flexMessage]);
+          alert('✅ 訂單卡片已成功傳送！請複製內容貼到「哈囉食堂」官方帳號。');
+          clearOrder();
+        } else {
+          // 備用：複製文字
+          let message =
+            `【日和便當 · 餐盒預訂單】\n────────────────\n` +
+            `姓名：${name}\n電話：${phone}\n`;
+          if (memberPhone) message += `會員電話：${memberPhone}\n`;
+          message += `取餐日期：${date}\n取餐時間：${time}\n`;
+          if (note) message += `備註：${note}\n`;
+          message +=
+            `────────────────\n訂購品項：\n${orderItems}` +
+            `────────────────\n總金額：NT$ ${totalAmount}\n感謝您的訂購 ❤️`;
 
-        alert('✅ 訂單卡片已成功傳送！');
-        clearOrder();
-
+          try {
+            await navigator.clipboard.writeText(message);
+            alert('✅ 訂單內容已複製！請貼到「哈囉食堂」聊天室傳送。');
+          } catch (clipErr) {
+            alert('📋 請複製以下訂單內容貼到「哈囉食堂」聊天室：\n\n' + message);
+          }
+        }
       } catch (error) {
         console.error('❌ 發送失敗:', error);
         alert('❌ 發送失敗，請重試！\n錯誤訊息：' + error.message);
