@@ -266,7 +266,8 @@
     }
 
     .form-group input,
-    .form-group select {
+    .form-group select,
+    .form-group textarea {
       width: 100%;
       padding: 10px 12px;
       border: 1px solid var(--border-color);
@@ -275,6 +276,12 @@
       font-size: 14px;
       outline: none;
       color: var(--text-dark);
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 60px;
     }
 
     .summary-box {
@@ -331,7 +338,7 @@
   </header>
 
   <div class="notice-box" id="notice-display">
-    🍱 請於前一日預訂，送出訂單後將自動開啟 LINE 傳送訂購細項，等待回覆確認即完成預訂！
+    🍱 請於早上九點前預訂，送出訂單後將自動傳送訂購細項，等待回覆確認即完成預訂！
   </div>
 
   <div class="admin-panel admin-only">
@@ -381,6 +388,10 @@
       <input type="tel" id="phone" required placeholder="例：0912345678">
     </div>
     <div class="form-group">
+      <label for="member-phone">會員電話 (集點用，無會員免填)</label>
+      <input type="tel" id="member-phone" placeholder="例：0912345678">
+    </div>
+    <div class="form-group">
       <label for="pickup-date">取餐日期 *</label>
       <input type="date" id="pickup-date" required>
     </div>
@@ -394,6 +405,10 @@
         <option value="18:00 - 18:30">18:00 - 18:30</option>
       </select>
     </div>
+    <div class="form-group">
+      <label for="note">備註 (特殊需求請填寫)</label>
+      <textarea id="note" rows="2" placeholder="例如：不要辣 / 餐具多一份"></textarea>
+    </div>
   </form>
 
   <div class="summary-box">
@@ -404,30 +419,31 @@
 
   <script>
     // ============================================================
-    // 🔐 設定區（請自行修改）
+    // 🔐 設定區
     // ============================================================
-    const ADMIN_PASSWORD = "1234"; // 管理者密碼
-    const LIFF_ID = "2011112664-289oMrlD"; // ✅ 你的 LIFF ID
+    const ADMIN_PASSWORD = "55688";
+    const LIFF_ID = "2011112664-289oMrlD";
+    const OFFICIAL_ACCOUNT_ID = "473lfggk";
 
     // ============================================================
-    // 預設資料
+    // 預設餐點（恢復原本的餐點）
     // ============================================================
-    const defaultNotice = "🍱 請於前一日預訂，送出訂單後將自動開啟 LINE 傳送訂購細項，等待回覆確認即完成預訂！";
+    const defaultNotice = "🍱 請於早上九點前預訂，送出訂單後將自動傳送訂購細項，等待回覆確認即完成預訂！";
     const defaultProducts = [{
-      title: "日式照燒雞腿餐盒",
-      desc: "現煎雞腿排 × 溫熱時蔬 × 藜麥飯",
-      price: 150,
-      img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300"
+      title: "蘑菇鐵板麵餐盒",
+      desc: "鐵板麵 × 太陽蛋 × 季節時蔬",
+      price: 65,
+      img: "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300"
     }, {
-      title: "鹽烤鯖魚餐盒",
-      desc: "挪威鯖魚 × 溏心蛋 × 季節時蔬",
-      price: 160,
+      title: "黑胡椒雞柳餐盒",
+      desc: "雞肉 × 太陽蛋 × 時蔬",
+      price: 90,
       img: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=300"
     }, {
-      title: "香煎嫩雞餐盒",
-      desc: "去骨雞腿 × 太陽蛋 × 季節時蔬",
-      price: 170,
-      img: "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300"
+      title: "蔥鹽雞腿餐盒",
+      desc: "雞肉 × 太陽蛋 × 時蔬",
+      price: 90,
+      img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300"
     }];
 
     // ============================================================
@@ -442,19 +458,15 @@
     // 初始化
     // ============================================================
     function init() {
-      // 載入商品
       const savedProducts = localStorage.getItem('bento_products');
       products = savedProducts ? JSON.parse(savedProducts) : defaultProducts;
 
-      // 載入公告
       const savedNotice = localStorage.getItem('bento_notice');
       document.getElementById('notice-display').innerText = savedNotice || defaultNotice;
       document.getElementById('input-notice').value = savedNotice || defaultNotice;
 
-      // 檢查登入狀態
       checkAdminStatus();
 
-      // 設定最小取餐日期為明天
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       document.getElementById('pickup-date').min = tomorrow.toISOString().split('T')[0];
@@ -484,7 +496,8 @@
         })
         .catch((err) => {
           console.error('❌ LIFF 初始化失敗:', err);
-          statusEl.innerText = '⚠️ LIFF 初始化失敗，請確認設定';
+          statusEl.innerText = '⚠️ LIFF 初始化失敗，將使用備用方案';
+          liffReady = false;
         });
     }
 
@@ -673,13 +686,15 @@
     }
 
     // ============================================================
-    // 發送訂單到 LINE（使用 LIFF）
+    // 發送訂單到 LINE
     // ============================================================
     async function sendToLine() {
       const name = document.getElementById('name').value.trim();
       const phone = document.getElementById('phone').value.trim();
+      const memberPhone = document.getElementById('member-phone').value.trim();
       const date = document.getElementById('pickup-date').value;
       const time = document.getElementById('pickup-time').value;
+      const note = document.getElementById('note').value.trim();
 
       if (!name || !phone || !date || !time) {
         alert('請完整填寫訂購人資訊與預計取餐時間！');
@@ -702,56 +717,81 @@
       }
 
       const totalAmount = document.getElementById('total-amount').innerText;
-      const message =
+      const btn = document.getElementById('sendOrderBtn');
+      btn.disabled = true;
+      btn.innerText = '⏳ 傳送中...';
+
+      let message =
         `【日和便當 · 餐盒預訂單】\n` +
         `────────────────\n` +
         `👤 姓名：${name}\n` +
-        `📞 電話：${phone}\n` +
+        `📞 電話：${phone}\n`;
+
+      if (memberPhone) {
+        message += `⭐ 會員電話：${memberPhone}\n`;
+      }
+
+      message +=
         `📅 取餐日期：${date}\n` +
-        `🕐 取餐時間：${time}\n` +
+        `🕐 取餐時間：${time}\n`;
+
+      if (note) {
+        message += `📝 備註：${note}\n`;
+      }
+
+      message +=
         `────────────────\n` +
         `📋 訂購品項：\n${orderItems}` +
         `────────────────\n` +
         `💰 總金額：NT$ ${totalAmount}\n` +
         `────────────────\n` +
-        `感謝您的訂購 ❤️ 我們將盡快為您準備！`;
-
-      const btn = document.getElementById('sendOrderBtn');
-      btn.disabled = true;
-      btn.innerText = '⏳ 傳送中...';
+        `感謝您的訂購 ❤️`;
 
       try {
-        // 方法1：使用 LIFF sendMessages（需要在 LINE 內開啟）
         if (liffReady && liff.isLoggedIn() && liff.isInClient()) {
-          const flexMessage = buildFlexMessage(name, phone, date, time, orderItems, totalAmount);
+          const flexMessage = buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, totalAmount);
           await liff.sendMessages([flexMessage]);
           alert('✅ 訂單已成功傳送至 LINE 聊天室！');
-          // 清空數量
-          document.querySelectorAll('.qty-number').forEach(el => el.innerText = '0');
-          calculateTotal();
-          document.getElementById('name').value = '';
-          document.getElementById('phone').value = '';
+          clearOrder();
         } else {
-          // 方法2：備用方案 - 使用 LINE URL Scheme（可在瀏覽器或 LINE 內使用）
-          const lineId = '2011112664'; // 你的 LINE 官方帳號 ID（純數字）
           const encodedMsg = encodeURIComponent(message);
-          window.open(`https://line.me/R/oaMessage/${lineId}/?${encodedMsg}`, '_blank');
-          alert('✅ 已開啟 LINE，請手動發送訂單訊息！');
+          const url = `https://line.me/R/oaMessage/@${OFFICIAL_ACCOUNT_ID}/?${encodedMsg}`;
+          window.open(url, '_blank');
+          alert('✅ 已開啟傳送頁面，請點擊「傳送」發送訂單！');
         }
       } catch (error) {
-        console.error('發送失敗:', error);
-        alert('❌ 發送失敗，請確認 LIFF 設定是否正確。\n錯誤訊息：' + error.message);
+        console.error('❌ 發送失敗:', error);
+        try {
+          await navigator.clipboard.writeText(message);
+          alert(
+            '⚠️ 無法自動傳送訂單，但訂單內容已複製到剪貼簿！\n\n' +
+            '請前往「哈囉食堂」聊天室貼上傳送。'
+          );
+        } catch (clipErr) {
+          alert(
+            '⚠️ 請手動複製以下訂單內容，貼到「哈囉食堂」聊天室：\n\n' +
+            message
+          );
+        }
       } finally {
         btn.disabled = false;
         btn.innerText = '📤 送出餐盒預訂 (LINE)';
       }
     }
 
+    function clearOrder() {
+      document.querySelectorAll('.qty-number').forEach(el => el.innerText = '0');
+      calculateTotal();
+      document.getElementById('name').value = '';
+      document.getElementById('phone').value = '';
+      document.getElementById('member-phone').value = '';
+      document.getElementById('note').value = '';
+    }
+
     // ============================================================
     // 建立 Flex Message
     // ============================================================
-    function buildFlexMessage(name, phone, date, time, orderItems, total) {
-      // 解析訂單品項為 Flex 格式
+    function buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, total) {
       const itemLines = orderItems.split('\n').filter(line => line.trim() !== '');
       const itemContents = itemLines.map(line => {
         const match = line.match(/🍱 (.+) x (\d+) \(NT\$(\d+)\)/);
@@ -774,12 +814,26 @@
         { type: "text", text: "新訂單通知", color: "#aaaaaa", size: "sm" },
         { type: "separator", margin: "md" },
         { type: "text", text: `👤 姓名：${name}`, size: "sm" },
-        { type: "text", text: `📞 電話：${phone}`, size: "sm" },
+        { type: "text", text: `📞 電話：${phone}`, size: "sm" }
+      ];
+
+      if (memberPhone) {
+        bodyContents.push({ type: "text", text: `⭐ 會員電話：${memberPhone}`, size: "sm" });
+      }
+
+      bodyContents.push(
         { type: "text", text: `📅 取餐日期：${date}`, size: "sm" },
-        { type: "text", text: `🕐 取餐時間：${time}`, size: "sm" },
+        { type: "text", text: `🕐 取餐時間：${time}`, size: "sm" }
+      );
+
+      if (note) {
+        bodyContents.push({ type: "text", text: `📝 備註：${note}`, size: "sm" });
+      }
+
+      bodyContents.push(
         { type: "separator", margin: "md" },
         { type: "text", text: "📋 訂購品項", weight: "bold", size: "sm" }
-      ];
+      );
 
       itemContents.forEach((item, index) => {
         bodyContents.push(item);
