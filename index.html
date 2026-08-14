@@ -143,6 +143,26 @@
       margin-top: 8px;
     }
 
+    .btn-danger {
+      background: var(--danger-color);
+      color: white;
+      border: none;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+
+    .time-tag {
+      display: inline-block;
+      background: #efebe4;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      margin: 3px 4px 3px 0;
+    }
+
     .product-card {
       background: var(--card-bg);
       border-radius: 12px;
@@ -347,6 +367,13 @@
       color: var(--accent-color);
       margin-top: 8px;
     }
+
+    .time-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
   </style>
 </head>
 <body>
@@ -371,6 +398,22 @@
         <textarea id="input-notice" rows="3" placeholder="請輸入最新公告內容..."></textarea>
       </div>
       <button class="btn-save-primary" onclick="saveNotice()">儲存並發布公告</button>
+    </div>
+
+    <!-- ======== 取餐時段管理 ======== -->
+    <div class="admin-section">
+      <h3>🕐 管理取餐時段</h3>
+      <div class="admin-form-group">
+        <label>新增時段（例如：13:00 - 13:30）</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="input-new-time" placeholder="13:00 - 13:30" style="flex:1;">
+          <button class="btn-save-primary" onclick="addTimeSlot()" style="width:auto; padding:10px 20px; margin-top:0;">➕ 新增</button>
+        </div>
+      </div>
+      <div>
+        <label>目前時段：</label>
+        <div class="time-list" id="time-list-display"></div>
+      </div>
     </div>
 
     <div>
@@ -426,10 +469,6 @@
       <label for="pickup-time">預計取餐時間 *</label>
       <select id="pickup-time" required>
         <option value="">-- 請選擇時間段 --</option>
-        <option value="11:30 - 12:00">11:30 - 12:00</option>
-        <option value="12:00 - 12:30">12:00 - 12:30</option>
-        <option value="17:30 - 18:00">17:30 - 18:00</option>
-        <option value="18:00 - 18:30">18:00 - 18:30</option>
       </select>
     </div>
     <div class="form-group">
@@ -453,9 +492,10 @@
     const OFFICIAL_ACCOUNT_ID = "473lfggk";
 
     // ============================================================
-    // 預設餐點
+    // 預設資料
     // ============================================================
     const defaultNotice = "🍱 請於早上九點前預訂，送出訂單後將自動傳送訂購細項，等待回覆確認即完成預訂！";
+
     const defaultProducts = [{
       title: "蘑菇鐵板麵餐盒",
       desc: "鐵板麵 × 太陽蛋 × 季節時蔬",
@@ -473,10 +513,18 @@
       img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300"
     }];
 
+    // ⭐ 預設取餐時段（你指定的三個）
+    const defaultTimeSlots = [
+      "11:30 - 12:00",
+      "12:00 - 12:30",
+      "12:30 - 13:00"
+    ];
+
     // ============================================================
     // 全域變數
     // ============================================================
     let products = [];
+    let timeSlots = [];
     let clickCount = 0;
     let clickTimer = null;
     let liffReady = false;
@@ -492,6 +540,10 @@
       document.getElementById('notice-display').innerText = savedNotice || defaultNotice;
       document.getElementById('input-notice').value = savedNotice || defaultNotice;
 
+      // 載入時段（localStorage 若無資料則使用預設三個）
+      const savedTimeSlots = localStorage.getItem('bento_timeslots');
+      timeSlots = savedTimeSlots ? JSON.parse(savedTimeSlots) : defaultTimeSlots;
+
       checkAdminStatus();
 
       const tomorrow = new Date();
@@ -500,6 +552,8 @@
       document.getElementById('pickup-date').value = tomorrow.toISOString().split('T')[0];
 
       renderProducts();
+      renderTimeSlots();
+      populateTimeSelect();
       initLIFF();
     }
 
@@ -526,6 +580,77 @@
           statusEl.innerText = '⚠️ LIFF 初始化失敗，將使用備用方案';
           liffReady = false;
         });
+    }
+
+    // ============================================================
+    // 取餐時段管理（⭐ 新功能）
+    // ============================================================
+    function renderTimeSlots() {
+      const container = document.getElementById('time-list-display');
+      container.innerHTML = '';
+      const isAdmin = sessionStorage.getItem('is_admin') === 'true';
+
+      if (timeSlots.length === 0) {
+        container.innerHTML = '<span style="color:#aaa;font-size:13px;">尚無時段，請新增</span>';
+        return;
+      }
+
+      timeSlots.forEach((slot, index) => {
+        const span = document.createElement('span');
+        span.className = 'time-tag';
+        span.textContent = slot;
+        if (isAdmin) {
+          const delBtn = document.createElement('button');
+          delBtn.className = 'btn-danger';
+          delBtn.textContent = '✕';
+          delBtn.onclick = function(e) {
+            e.stopPropagation();
+            deleteTimeSlot(index);
+          };
+          span.appendChild(delBtn);
+        }
+        container.appendChild(span);
+      });
+    }
+
+    function populateTimeSelect() {
+      const select = document.getElementById('pickup-time');
+      select.innerHTML = '<option value="">-- 請選擇時間段 --</option>';
+      timeSlots.forEach(slot => {
+        const option = document.createElement('option');
+        option.value = slot;
+        option.textContent = slot;
+        select.appendChild(option);
+      });
+    }
+
+    function addTimeSlot() {
+      const input = document.getElementById('input-new-time');
+      const value = input.value.trim();
+      if (!value) {
+        alert('請輸入時段！');
+        return;
+      }
+      if (timeSlots.includes(value)) {
+        alert('此時段已存在！');
+        return;
+      }
+      timeSlots.push(value);
+      localStorage.setItem('bento_timeslots', JSON.stringify(timeSlots));
+      input.value = '';
+      renderTimeSlots();
+      populateTimeSelect();
+      alert('✅ 時段已新增！');
+    }
+
+    function deleteTimeSlot(index) {
+      if (confirm(`確定要刪除「${timeSlots[index]}」嗎？`)) {
+        timeSlots.splice(index, 1);
+        localStorage.setItem('bento_timeslots', JSON.stringify(timeSlots));
+        renderTimeSlots();
+        populateTimeSelect();
+        alert('✅ 時段已刪除！');
+      }
     }
 
     // ============================================================
@@ -593,6 +718,7 @@
       const isAdmin = sessionStorage.getItem('is_admin') === 'true';
       document.body.classList.toggle('is-admin', isAdmin);
       renderProducts();
+      renderTimeSlots();
     }
 
     function adminLogout() {
@@ -744,10 +870,9 @@
     }
 
     // ============================================================
-    // 建立漂亮卡片 Flex Message（仿圖1樣式）
+    // 建立 Flex Message 卡片（仿圖1樣式）
     // ============================================================
     function buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, total) {
-      // 計算總數量
       let totalQty = 0;
       const itemLines = orderItems.split('\n').filter(line => line.trim() !== '');
       const itemContents = itemLines.map(line => {
@@ -767,16 +892,18 @@
         return null;
       }).filter(item => item !== null);
 
-      // 分隔線
-      const separator = { type: "separator", margin: "md", color: "#e8e2d8" };
+      // 如果商品太多，只顯示前 5 項，其餘用文字表示
+      let displayItems = itemContents;
+      let extraCount = 0;
+      if (itemContents.length > 5) {
+        displayItems = itemContents.slice(0, 5);
+        extraCount = itemContents.length - 5;
+      }
 
-      // 主內容
       const bodyContents = [
-        // 店家名稱
         { type: "text", text: "🍱 日和便當 · 手作餐盒", weight: "bold", size: "lg", color: "#6b513e" },
         { type: "text", text: "餐盒預購明細", color: "#a88367", size: "sm" },
         { type: "separator", margin: "md", color: "#e8e2d8" },
-        // 商品標題列
         {
           type: "box",
           layout: "horizontal",
@@ -788,12 +915,20 @@
         }
       ];
 
-      // 商品清單
-      itemContents.forEach((item, index) => {
+      displayItems.forEach((item) => {
         bodyContents.push(item);
       });
 
-      // 底部 - 總計
+      if (extraCount > 0) {
+        bodyContents.push({
+          type: "text",
+          text: `... 及其他 ${extraCount} 項`,
+          size: "sm",
+          color: "#8c8275",
+          align: "center"
+        });
+      }
+
       bodyContents.push(
         { type: "separator", margin: "md", color: "#e8e2d8" },
         {
@@ -804,11 +939,7 @@
             { type: "text", text: `NT$${total}`, size: "lg", color: "#6b513e", weight: "bold", align: "end" }
           ]
         },
-        { type: "separator", margin: "md", color: "#e8e2d8" }
-      );
-
-      // 訂購人資訊
-      bodyContents.push(
+        { type: "separator", margin: "md", color: "#e8e2d8" },
         { type: "text", text: `姓名：${name}`, size: "sm", color: "#4a423a" },
         { type: "text", text: `電話：${phone}`, size: "sm", color: "#4a423a" }
       );
@@ -825,7 +956,6 @@
         bodyContents.push({ type: "text", text: `備註：${note}`, size: "sm", color: "#8c8275" });
       }
 
-      // 感謝語
       bodyContents.push(
         { type: "separator", margin: "md", color: "#e8e2d8" },
         { type: "text", text: "感謝您的訂購 ❤️", align: "center", size: "sm", color: "#a88367" }
@@ -890,38 +1020,29 @@
 
       try {
         if (liffReady && liff.isLoggedIn() && liff.isInClient()) {
-          // 使用 Flex Message 漂亮卡片
           const flexMessage = buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, totalAmount);
           await liff.sendMessages([flexMessage]);
           alert('✅ 訂單已成功傳送！');
           clearOrder();
         } else {
-          // 備用方案：純文字
+          // 備用方案
           let message =
-            `【日和便當 · 餐盒預訂單】\n` +
-            `────────────────\n` +
-            `姓名：${name}\n` +
-            `電話：${phone}\n`;
+            `【日和便當 · 餐盒預訂單】\n────────────────\n` +
+            `姓名：${name}\n電話：${phone}\n`;
           if (memberPhone) message += `會員電話：${memberPhone}\n`;
-          message +=
-            `取餐日期：${date}\n` +
-            `取餐時間：${time}\n`;
+          message += `取餐日期：${date}\n取餐時間：${time}\n`;
           if (note) message += `備註：${note}\n`;
           message +=
-            `────────────────\n` +
-            `訂購品項：\n${orderItems}` +
-            `────────────────\n` +
-            `總金額：NT$ ${totalAmount}\n` +
-            `感謝您的訂購 ❤️`;
+            `────────────────\n訂購品項：\n${orderItems}` +
+            `────────────────\n總金額：NT$ ${totalAmount}\n感謝您的訂購 ❤️`;
 
           const encodedMsg = encodeURIComponent(message);
-          const url = `https://line.me/R/oaMessage/@${OFFICIAL_ACCOUNT_ID}/?${encodedMsg}`;
-          window.open(url, '_blank');
+          window.open(`https://line.me/R/oaMessage/@${OFFICIAL_ACCOUNT_ID}/?${encodedMsg}`, '_blank');
           alert('✅ 已開啟傳送頁面！');
         }
       } catch (error) {
         console.error('❌ 發送失敗:', error);
-        alert('⚠️ 發送失敗，請重試或截圖訂單內容手動傳送。');
+        alert('⚠️ 發送失敗，請重試。');
       } finally {
         btn.disabled = false;
         btn.innerText = '📤 送出餐盒預訂 (LINE)';
