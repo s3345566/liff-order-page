@@ -284,7 +284,6 @@
       min-height: 60px;
     }
 
-    /* 勾選框樣式 */
     .checkbox-group {
       display: flex;
       align-items: center;
@@ -548,7 +547,6 @@
       }
     }
 
-    // 當聯絡電話變更時，如果有勾「同聯絡電話」，自動同步
     document.addEventListener('DOMContentLoaded', function() {
       const phoneInput = document.getElementById('phone');
       const memberInput = document.getElementById('member-phone');
@@ -746,6 +744,115 @@
     }
 
     // ============================================================
+    // 建立漂亮卡片 Flex Message（仿圖1樣式）
+    // ============================================================
+    function buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, total) {
+      // 計算總數量
+      let totalQty = 0;
+      const itemLines = orderItems.split('\n').filter(line => line.trim() !== '');
+      const itemContents = itemLines.map(line => {
+        const match = line.match(/🍱 (.+) x (\d+) \(NT\$(\d+)\)/);
+        if (match) {
+          totalQty += parseInt(match[2], 10);
+          return {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: match[1], flex: 3, size: "sm", color: "#4a423a" },
+              { type: "text", text: `× ${match[2]}`, flex: 1, align: "center", size: "sm", color: "#6b513e" },
+              { type: "text", text: `$${match[3]}`, flex: 1, align: "end", size: "sm", color: "#6b513e", weight: "bold" }
+            ]
+          };
+        }
+        return null;
+      }).filter(item => item !== null);
+
+      // 分隔線
+      const separator = { type: "separator", margin: "md", color: "#e8e2d8" };
+
+      // 主內容
+      const bodyContents = [
+        // 店家名稱
+        { type: "text", text: "🍱 日和便當 · 手作餐盒", weight: "bold", size: "lg", color: "#6b513e" },
+        { type: "text", text: "餐盒預購明細", color: "#a88367", size: "sm" },
+        { type: "separator", margin: "md", color: "#e8e2d8" },
+        // 商品標題列
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "品項", size: "xs", color: "#8c8275", flex: 3 },
+            { type: "text", text: "數量", size: "xs", color: "#8c8275", flex: 1, align: "center" },
+            { type: "text", text: "價格", size: "xs", color: "#8c8275", flex: 1, align: "end" }
+          ]
+        }
+      ];
+
+      // 商品清單
+      itemContents.forEach((item, index) => {
+        bodyContents.push(item);
+      });
+
+      // 底部 - 總計
+      bodyContents.push(
+        { type: "separator", margin: "md", color: "#e8e2d8" },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: `共 ${totalQty} 份`, size: "sm", color: "#6b513e", flex: 2 },
+            { type: "text", text: `NT$${total}`, size: "lg", color: "#6b513e", weight: "bold", align: "end" }
+          ]
+        },
+        { type: "separator", margin: "md", color: "#e8e2d8" }
+      );
+
+      // 訂購人資訊
+      bodyContents.push(
+        { type: "text", text: `姓名：${name}`, size: "sm", color: "#4a423a" },
+        { type: "text", text: `電話：${phone}`, size: "sm", color: "#4a423a" }
+      );
+
+      if (memberPhone) {
+        bodyContents.push({ type: "text", text: `會員電話：${memberPhone}`, size: "sm", color: "#4a423a" });
+      }
+
+      bodyContents.push(
+        { type: "text", text: `取貨：${date} ${time}`, size: "sm", color: "#4a423a" }
+      );
+
+      if (note) {
+        bodyContents.push({ type: "text", text: `備註：${note}`, size: "sm", color: "#8c8275" });
+      }
+
+      // 感謝語
+      bodyContents.push(
+        { type: "separator", margin: "md", color: "#e8e2d8" },
+        { type: "text", text: "感謝您的訂購 ❤️", align: "center", size: "sm", color: "#a88367" }
+      );
+
+      return {
+        type: "flex",
+        altText: `日和便當訂單 - 總計 $${total}`,
+        contents: {
+          type: "bubble",
+          body: {
+            type: "box",
+            layout: "vertical",
+            contents: bodyContents
+          },
+          footer: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              { type: "text", text: "訂單編號自動產生", size: "xs", color: "#aaaaaa", align: "center" }
+            ]
+          }
+        }
+      };
+    }
+
+    // ============================================================
     // 發送訂單到 LINE
     // ============================================================
     async function sendToLine() {
@@ -781,58 +888,40 @@
       btn.disabled = true;
       btn.innerText = '⏳ 傳送中...';
 
-      let message =
-        `【日和便當 · 餐盒預訂單】\n` +
-        `────────────────\n` +
-        `👤 姓名：${name}\n` +
-        `📞 電話：${phone}\n`;
-
-      if (memberPhone) {
-        message += `⭐ 會員電話：${memberPhone}\n`;
-      }
-
-      message +=
-        `📅 取餐日期：${date}\n` +
-        `🕐 取餐時間：${time}\n`;
-
-      if (note) {
-        message += `📝 備註：${note}\n`;
-      }
-
-      message +=
-        `────────────────\n` +
-        `📋 訂購品項：\n${orderItems}` +
-        `────────────────\n` +
-        `💰 總金額：NT$ ${totalAmount}\n` +
-        `────────────────\n` +
-        `感謝您的訂購 ❤️`;
-
       try {
         if (liffReady && liff.isLoggedIn() && liff.isInClient()) {
+          // 使用 Flex Message 漂亮卡片
           const flexMessage = buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, totalAmount);
           await liff.sendMessages([flexMessage]);
-          alert('✅ 訂單已成功傳送至 LINE 聊天室！');
+          alert('✅ 訂單已成功傳送！');
           clearOrder();
         } else {
+          // 備用方案：純文字
+          let message =
+            `【日和便當 · 餐盒預訂單】\n` +
+            `────────────────\n` +
+            `姓名：${name}\n` +
+            `電話：${phone}\n`;
+          if (memberPhone) message += `會員電話：${memberPhone}\n`;
+          message +=
+            `取餐日期：${date}\n` +
+            `取餐時間：${time}\n`;
+          if (note) message += `備註：${note}\n`;
+          message +=
+            `────────────────\n` +
+            `訂購品項：\n${orderItems}` +
+            `────────────────\n` +
+            `總金額：NT$ ${totalAmount}\n` +
+            `感謝您的訂購 ❤️`;
+
           const encodedMsg = encodeURIComponent(message);
           const url = `https://line.me/R/oaMessage/@${OFFICIAL_ACCOUNT_ID}/?${encodedMsg}`;
           window.open(url, '_blank');
-          alert('✅ 已開啟傳送頁面，請點擊「傳送」發送訂單！');
+          alert('✅ 已開啟傳送頁面！');
         }
       } catch (error) {
         console.error('❌ 發送失敗:', error);
-        try {
-          await navigator.clipboard.writeText(message);
-          alert(
-            '⚠️ 無法自動傳送訂單，但訂單內容已複製到剪貼簿！\n\n' +
-            '請前往「哈囉食堂」聊天室貼上傳送。'
-          );
-        } catch (clipErr) {
-          alert(
-            '⚠️ 請手動複製以下訂單內容，貼到「哈囉食堂」聊天室：\n\n' +
-            message
-          );
-        }
+        alert('⚠️ 發送失敗，請重試或截圖訂單內容手動傳送。');
       } finally {
         btn.disabled = false;
         btn.innerText = '📤 送出餐盒預訂 (LINE)';
@@ -849,95 +938,6 @@
       document.getElementById('same-as-phone').checked = false;
       document.getElementById('member-phone').disabled = false;
       document.getElementById('member-phone').style.opacity = '1';
-    }
-
-    // ============================================================
-    // 建立 Flex Message
-    // ============================================================
-    function buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, total) {
-      const itemLines = orderItems.split('\n').filter(line => line.trim() !== '');
-      const itemContents = itemLines.map(line => {
-        const match = line.match(/🍱 (.+) x (\d+) \(NT\$(\d+)\)/);
-        if (match) {
-          return {
-            type: "box",
-            layout: "horizontal",
-            contents: [
-              { type: "text", text: match[1], flex: 3, size: "sm" },
-              { type: "text", text: `x ${match[2]}`, flex: 1, align: "center", size: "sm" },
-              { type: "text", text: `$${match[3]}`, flex: 1, align: "end", size: "sm" }
-            ]
-          };
-        }
-        return null;
-      }).filter(item => item !== null);
-
-      const bodyContents = [
-        { type: "text", text: "🍱 日和便當 · 餐盒預訂", weight: "bold", size: "lg" },
-        { type: "text", text: "新訂單通知", color: "#aaaaaa", size: "sm" },
-        { type: "separator", margin: "md" },
-        { type: "text", text: `👤 姓名：${name}`, size: "sm" },
-        { type: "text", text: `📞 電話：${phone}`, size: "sm" }
-      ];
-
-      if (memberPhone) {
-        bodyContents.push({ type: "text", text: `⭐ 會員電話：${memberPhone}`, size: "sm" });
-      }
-
-      bodyContents.push(
-        { type: "text", text: `📅 取餐日期：${date}`, size: "sm" },
-        { type: "text", text: `🕐 取餐時間：${time}`, size: "sm" }
-      );
-
-      if (note) {
-        bodyContents.push({ type: "text", text: `📝 備註：${note}`, size: "sm" });
-      }
-
-      bodyContents.push(
-        { type: "separator", margin: "md" },
-        { type: "text", text: "📋 訂購品項", weight: "bold", size: "sm" }
-      );
-
-      itemContents.forEach((item, index) => {
-        bodyContents.push(item);
-        if (index < itemContents.length - 1) {
-          bodyContents.push({ type: "separator", margin: "sm" });
-        }
-      });
-
-      bodyContents.push(
-        { type: "separator", margin: "md" },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "💰 總金額", weight: "bold", size: "md" },
-            { type: "text", text: `$${total}`, weight: "bold", size: "md", align: "end", color: "#c0392b" }
-          ]
-        },
-        { type: "separator", margin: "md" },
-        { type: "text", text: "感謝您的訂購 ❤️", align: "center", size: "sm", color: "#888888" }
-      );
-
-      return {
-        type: "flex",
-        altText: `日和便當訂單 - 總計 $${total}`,
-        contents: {
-          type: "bubble",
-          body: {
-            type: "box",
-            layout: "vertical",
-            contents: bodyContents
-          },
-          footer: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              { type: "text", text: "我們將盡快為您準備！", align: "center", size: "xs", color: "#aaaaaa" }
-            ]
-          }
-        }
-      };
     }
 
     // ============================================================
