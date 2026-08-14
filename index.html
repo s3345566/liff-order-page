@@ -2,18 +2,19 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>日和便當 ‧ 手作餐盒</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>日系手作餐盒預購系統</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     :root {
-      --bg-color: #f7f4ee;        /* 溫暖米白背景 */
-      --card-bg: #ffffff;          /* 純白卡片 */
-      --primary-color: #6b513e;    /* 深木棕 */
-      --accent-color: #a88367;     /* 柔和淺棕 */
-      --text-dark: #4a423a;        /* 質感黑褐內文 */
-      --border-color: #e8e2d8;     /* 柔和邊框 */
-      --green-accent: #798a6d;    /* 日系抹茶綠 */
-      --danger-color: #c95b5b;     /* 刪除紅 */
+      --bg-color: #f7f4ee;
+      --card-bg: #ffffff;
+      --primary-color: #6b513e;
+      --accent-color: #a88367;
+      --text-dark: #4a423a;
+      --border-color: #e8e2d8;
+      --green-accent: #798a6d;
+      --danger-color: #c95b5b;
     }
 
     * {
@@ -32,7 +33,6 @@
       position: relative;
     }
 
-    /* 頂部區域 */
     .top-bar {
       display: flex;
       justify-content: flex-end;
@@ -41,12 +41,10 @@
       min-height: 30px;
     }
 
-    /* 管理員專用元素：預設隱藏 */
     .admin-only {
       display: none !important;
     }
 
-    /* 登入管理者狀態時顯示 */
     body.is-admin .admin-only {
       display: block !important;
     }
@@ -73,7 +71,6 @@
       letter-spacing: 2px;
       color: var(--primary-color);
       margin-bottom: 6px;
-      font-weight: 800;
     }
 
     header p {
@@ -81,7 +78,6 @@
       color: var(--accent-color);
     }
 
-    /* 公告欄 */
     .notice-box {
       background-color: #efebe4;
       border-radius: 8px;
@@ -94,7 +90,6 @@
       white-space: pre-wrap;
     }
 
-    /* 管理者控制面板 */
     .admin-panel {
       background: var(--card-bg);
       border: 2px dashed var(--accent-color);
@@ -127,7 +122,8 @@
       font-weight: bold;
     }
 
-    .admin-form-group input, .admin-form-group textarea {
+    .admin-form-group input,
+    .admin-form-group textarea {
       width: 100%;
       padding: 8px;
       border: 1px solid var(--border-color);
@@ -147,15 +143,14 @@
       margin-top: 8px;
     }
 
-    /* 餐盒卡片 */
     .product-card {
       background: var(--card-bg);
-      border-radius: 16px;
+      border-radius: 12px;
       padding: 12px;
       margin-bottom: 16px;
       display: flex;
       gap: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
       border: 1px solid var(--border-color);
       position: relative;
     }
@@ -163,7 +158,7 @@
     .product-img {
       width: 95px;
       height: 95px;
-      border-radius: 12px;
+      border-radius: 8px;
       object-fit: cover;
       background-color: #f0f0f0;
     }
@@ -176,8 +171,8 @@
     }
 
     .product-title {
-      font-size: 16px;
-      font-weight: 700;
+      font-size: 15px;
+      font-weight: 600;
       color: var(--primary-color);
       margin-bottom: 4px;
     }
@@ -196,45 +191,39 @@
     }
 
     .product-price {
-      font-weight: 800;
+      font-weight: bold;
       color: var(--primary-color);
-      font-size: 16px;
+      font-size: 15px;
     }
 
-    /* 數量控制按鈕組 */
     .quantity-control {
       display: flex;
       align-items: center;
-      gap: 10px;
-      background: #f2efe9;
+      gap: 8px;
+      background: var(--bg-color);
       border-radius: 20px;
-      padding: 3px 8px;
+      padding: 2px 6px;
     }
 
     .btn-qty {
-      width: 22px;
-      height: 22px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       border: none;
       background: var(--card-bg);
       color: var(--primary-color);
       font-weight: bold;
       cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .qty-number {
       font-size: 14px;
-      font-weight: 700;
-      min-width: 14px;
+      font-weight: 600;
+      min-width: 16px;
       text-align: center;
     }
 
-    /* 管理員編輯/刪除按鈕 */
     .admin-actions {
       display: flex;
       gap: 8px;
@@ -249,16 +238,20 @@
       cursor: pointer;
     }
 
-    .btn-delete { background: var(--danger-color); color: white; }
-    .btn-edit { background: var(--accent-color); color: white; }
+    .btn-delete {
+      background: var(--danger-color);
+      color: white;
+    }
+    .btn-edit {
+      background: var(--accent-color);
+      color: white;
+    }
 
-    /* 表單區塊 */
     .section-title {
       font-size: 16px;
-      font-weight: 700;
       color: var(--primary-color);
       margin: 24px 0 12px 0;
-      border-bottom: 1.5px solid var(--border-color);
+      border-bottom: 2px solid var(--border-color);
       padding-bottom: 6px;
     }
 
@@ -270,31 +263,10 @@
       display: block;
       font-size: 13px;
       margin-bottom: 4px;
-      font-weight: 600;
     }
 
-    .sub-text {
-      font-size: 11px;
-      color: #8c8275;
-      font-weight: normal;
-    }
-
-    /* 調整：將勾選按鈕整組垂直排列在標題下方 */
-    .checkbox-container {
-      margin-bottom: 6px;
-    }
-
-    .checkbox-label {
-      font-size: 12px;
-      color: var(--accent-color);
-      font-weight: normal;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .form-group input, .form-group select, .form-group textarea {
+    .form-group input,
+    .form-group select {
       width: 100%;
       padding: 10px 12px;
       border: 1px solid var(--border-color);
@@ -333,30 +305,36 @@
       cursor: pointer;
       letter-spacing: 1px;
     }
+
+    .btn-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .liff-status {
+      text-align: center;
+      font-size: 12px;
+      color: var(--accent-color);
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
 
-  <!-- 頂部：登出按鈕 (登入後顯示) -->
   <div class="top-bar">
     <button class="btn-admin-logout admin-only" onclick="adminLogout()">🔒 退出管理模式</button>
   </div>
 
-  <!-- 連擊標題 3 次輸入密碼解鎖 (密碼: 55688) -->
   <header onclick="handleHeaderClick()">
     <h1>日和便當 ‧ 手作餐盒</h1>
     <p>每日現做 ‧ 健康溫馨預購</p>
   </header>
 
-  <!-- 公告顯示區 -->
   <div class="notice-box" id="notice-display">
-🍱 請於早上九點前預訂，送出訂單後將自動開啟 LINE 傳送訂購細項，等待回覆確認即完成預訂！
+    🍱 請於前一日預訂，送出訂單後將自動開啟 LINE 傳送訂購細項，等待回覆確認即完成預訂！
   </div>
 
-  <!-- 管理員控制面板 -->
   <div class="admin-panel admin-only">
-    
-    <!-- 1. 編輯公告 -->
     <div class="admin-section">
       <h3>📢 編輯系統公告</h3>
       <div class="admin-form-group">
@@ -365,36 +343,33 @@
       <button class="btn-save-primary" onclick="saveNotice()">儲存並發布公告</button>
     </div>
 
-    <!-- 2. 餐盒管理 -->
     <div>
       <h3 id="admin-form-title">➕ 新增餐盒品項</h3>
       <input type="hidden" id="edit-index" value="-1">
-      
+
       <div class="admin-form-group">
         <label>餐盒名稱 *</label>
-        <input type="text" id="input-title" placeholder="例如：蘑菇鐵板麵餐盒">
+        <input type="text" id="input-title" placeholder="例如：日式照燒雞腿餐盒">
       </div>
       <div class="admin-form-group">
         <label>簡介/食材說明</label>
-        <textarea id="input-desc" rows="2" placeholder="例如：鐵板麵 × 太陽蛋 × 季節時蔬"></textarea>
+        <textarea id="input-desc" rows="2" placeholder="例如：現煎雞腿排 × 溫熱時蔬 × 藜麥飯"></textarea>
       </div>
       <div class="admin-form-group">
         <label>售價 (NT$) *</label>
-        <input type="number" id="input-price" placeholder="例如：65">
+        <input type="number" id="input-price" placeholder="例如：150">
       </div>
       <div class="admin-form-group">
         <label>上傳照片</label>
         <input type="file" id="input-img" accept="image/*">
       </div>
-      
+
       <button class="btn-save-primary" onclick="saveProduct()">儲存餐盒商品</button>
     </div>
   </div>
 
-  <!-- 餐盒列表 -->
   <div id="product-list"></div>
 
-  <!-- 訂購人資料 -->
   <div class="section-title">訂購人資訊</div>
   <form id="order-form">
     <div class="form-group">
@@ -403,25 +378,8 @@
     </div>
     <div class="form-group">
       <label for="phone">聯絡電話 *</label>
-      <input type="tel" id="phone" required placeholder="例：0912345678" oninput="syncMemberPhone()">
+      <input type="tel" id="phone" required placeholder="例：0912345678">
     </div>
-    
-    <!-- 會員電話 (修改：垂直結構) -->
-    <div class="form-group">
-      <!-- 1. 標題 -->
-      <label for="member-phone">會員電話 <span class="sub-text">(集點用，無會員免填)</span></label>
-      
-      <!-- 2. 勾選框及說明文字 (垂直在標題下方) -->
-      <div class="checkbox-container">
-        <label class="checkbox-label">
-          <input type="checkbox" id="same-phone" onchange="toggleSamePhone(this)"> 同聯絡電話
-        </label>
-      </div>
-
-      <!-- 3. 輸入框 -->
-      <input type="tel" id="member-phone" placeholder="若會員電話與聯絡電話不同請在此輸入">
-    </div>
-
     <div class="form-group">
       <label for="pickup-date">取餐日期 *</label>
       <input type="date" id="pickup-date" required>
@@ -436,96 +394,103 @@
         <option value="18:00 - 18:30">18:00 - 18:30</option>
       </select>
     </div>
-
-    <!-- 訂購備註 -->
-    <div class="form-group">
-      <label for="note">訂購備註</label>
-      <textarea id="note" rows="2" placeholder="例如：飯少、蛋全熟、不加辣..."></textarea>
-    </div>
   </form>
 
-  <!-- 結算區塊 -->
   <div class="summary-box">
     <div class="total-price">總金額：NT$<span id="total-amount">0</span></div>
-    <button class="btn-submit" onclick="sendToLine()">送出餐盒預訂 (連動 LINE)</button>
+    <button class="btn-submit" id="sendOrderBtn" onclick="sendToLine()">📤 送出餐盒預訂 (LINE)</button>
+    <div class="liff-status" id="liffStatus">⏳ LIFF 初始化中...</div>
   </div>
 
   <script>
-    // 1. 設定檔 (請修改為您的 LINE 官方帳號 ID，去背 @ 符號)
-    const LINE_OFFICIAL_ACCOUNT_ID = "your_line_id"; 
-    const ADMIN_PASSWORD = "55688"; // 🔑 管理者驗證密碼：55688
+    // ============================================================
+    // 🔐 設定區（請自行修改）
+    // ============================================================
+    const ADMIN_PASSWORD = "1234"; // 管理者密碼
+    const LIFF_ID = "2011112664-289oMrlD"; // ✅ 你的 LIFF ID
 
-    const defaultNotice = "🍱 請於早上九點前預訂，送出訂單後將自動開啟 LINE 傳送訂購細項，等待回覆確認即完成預訂！";
-    
-    // 預設餐盒
-    const defaultProducts = [
-      {
-        title: "蘑菇鐵板麵餐盒",
-        desc: "鐵板麵 × 太陽蛋 × 季節時蔬",
-        price: 65,
-        img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&q=80"
-      },
-      {
-        title: "黑胡椒雞柳餐盒",
-        desc: "雞肉 × 太陽蛋 × 時蔬",
-        price: 90,
-        img: "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=500&q=80"
-      },
-      {
-        title: "蔥鹽雞腿餐盒",
-        desc: "雞肉×太陽蛋 × 時蔬",
-        price: 90,
-        img: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=500&q=80"
-      }
-    ];
+    // ============================================================
+    // 預設資料
+    // ============================================================
+    const defaultNotice = "🍱 請於前一日預訂，送出訂單後將自動開啟 LINE 傳送訂購細項，等待回覆確認即完成預訂！";
+    const defaultProducts = [{
+      title: "日式照燒雞腿餐盒",
+      desc: "現煎雞腿排 × 溫熱時蔬 × 藜麥飯",
+      price: 150,
+      img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300"
+    }, {
+      title: "鹽烤鯖魚餐盒",
+      desc: "挪威鯖魚 × 溏心蛋 × 季節時蔬",
+      price: 160,
+      img: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=300"
+    }, {
+      title: "香煎嫩雞餐盒",
+      desc: "去骨雞腿 × 太陽蛋 × 季節時蔬",
+      price: 170,
+      img: "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300"
+    }];
 
+    // ============================================================
+    // 全域變數
+    // ============================================================
     let products = [];
     let clickCount = 0;
     let clickTimer = null;
+    let liffReady = false;
 
-    // 2. 初始化
+    // ============================================================
+    // 初始化
+    // ============================================================
     function init() {
-      // 讀取餐盒資料
+      // 載入商品
       const savedProducts = localStorage.getItem('bento_products');
       products = savedProducts ? JSON.parse(savedProducts) : defaultProducts;
 
-      // 讀取公告內容
+      // 載入公告
       const savedNotice = localStorage.getItem('bento_notice');
-      const currentNotice = savedNotice || defaultNotice;
-      document.getElementById('notice-display').innerText = currentNotice;
-      document.getElementById('input-notice').value = currentNotice;
+      document.getElementById('notice-display').innerText = savedNotice || defaultNotice;
+      document.getElementById('input-notice').value = savedNotice || defaultNotice;
 
-      // 檢查驗證狀態
+      // 檢查登入狀態
       checkAdminStatus();
 
-      // 設定取餐日期最小值為「明天」
+      // 設定最小取餐日期為明天
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       document.getElementById('pickup-date').min = tomorrow.toISOString().split('T')[0];
+      document.getElementById('pickup-date').value = tomorrow.toISOString().split('T')[0];
 
       renderProducts();
+      initLIFF();
     }
 
-    // 3. 同聯絡電話連動
-    function toggleSamePhone(checkbox) {
-      const memberInput = document.getElementById('member-phone');
-      const phoneInput = document.getElementById('phone');
-      if (checkbox.checked) {
-        memberInput.value = phoneInput.value;
-        memberInput.readOnly = true;
-      } else {
-        memberInput.readOnly = false;
-      }
+    // ============================================================
+    // LIFF 初始化
+    // ============================================================
+    function initLIFF() {
+      const statusEl = document.getElementById('liffStatus');
+      statusEl.innerText = '⏳ LIFF 初始化中...';
+
+      liff.init({ liffId: LIFF_ID })
+        .then(() => {
+          liffReady = true;
+          if (!liff.isLoggedIn()) {
+            statusEl.innerText = '🔑 請登入 LINE';
+            liff.login();
+            return;
+          }
+          statusEl.innerText = '✅ LIFF 已就緒';
+          console.log('✅ LIFF 初始化完成');
+        })
+        .catch((err) => {
+          console.error('❌ LIFF 初始化失敗:', err);
+          statusEl.innerText = '⚠️ LIFF 初始化失敗，請確認設定';
+        });
     }
 
-    function syncMemberPhone() {
-      const checkbox = document.getElementById('same-phone');
-      if (checkbox.checked) {
-        document.getElementById('member-phone').value = document.getElementById('phone').value;
-      }
-    }
-
-    // 4. 暗號解鎖驗證
+    // ============================================================
+    // 管理者功能
+    // ============================================================
     function handleHeaderClick() {
       clickCount++;
       clearTimeout(clickTimer);
@@ -540,49 +505,45 @@
 
     function triggerAdminLogin() {
       if (sessionStorage.getItem('is_admin') === 'true') {
-        alert('您目前已處於管理者登入狀態！');
+        alert('您已處於管理者登入狀態！');
         return;
       }
-
       const inputPwd = prompt('🔐 請輸入管理者驗證密碼：');
       if (inputPwd === ADMIN_PASSWORD) {
         sessionStorage.setItem('is_admin', 'true');
         checkAdminStatus();
-        alert('驗證成功！已開啟管理者控制面板。');
+        alert('✅ 驗證成功！已開啟管理者功能。');
       } else if (inputPwd !== null) {
-        alert('密碼錯誤！無法開啟管理者權限。');
+        alert('❌ 密碼錯誤！');
       }
     }
 
     function checkAdminStatus() {
       const isAdmin = sessionStorage.getItem('is_admin') === 'true';
-      if (isAdmin) {
-        document.body.classList.add('is-admin');
-      } else {
-        document.body.classList.remove('is-admin');
-      }
+      document.body.classList.toggle('is-admin', isAdmin);
       renderProducts();
     }
 
     function adminLogout() {
       sessionStorage.removeItem('is_admin');
       checkAdminStatus();
-      alert('已成功退出管理者模式！');
+      alert('已退出管理者模式！');
     }
 
-    // 5. 發布與儲存公告
+    // ============================================================
+    // 公告管理
+    // ============================================================
     function saveNotice() {
-      const noticeText = document.getElementById('input-notice').value.trim();
-      if (!noticeText) {
-        alert('公告內容不可為空！');
-        return;
-      }
-      localStorage.setItem('bento_notice', noticeText);
-      document.getElementById('notice-display').innerText = noticeText;
-      alert('公告已更新並成功發布！');
+      const text = document.getElementById('input-notice').value.trim();
+      if (!text) { alert('公告內容不可為空！'); return; }
+      localStorage.setItem('bento_notice', text);
+      document.getElementById('notice-display').innerText = text;
+      alert('✅ 公告已更新！');
     }
 
-    // 6. 餐盒商品渲染與 CRUD
+    // ============================================================
+    // 商品管理
+    // ============================================================
     function renderProducts() {
       const container = document.getElementById('product-list');
       container.innerHTML = "";
@@ -591,7 +552,7 @@
       products.forEach((prod, index) => {
         const html = `
           <div class="product-card" data-index="${index}">
-            <img src="${prod.img}" alt="${prod.title}" class="product-img">
+            <img src="${prod.img}" alt="${prod.title}" class="product-img" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300'">
             <div class="product-info">
               <div>
                 <div class="product-title">${prod.title}</div>
@@ -600,7 +561,7 @@
               <div class="product-bottom">
                 <span class="product-price">NT$${prod.price}</span>
                 <div class="quantity-control">
-                  <button type="button" class="btn-qty" onclick="updateQty(this, -1)">-</button>
+                  <button type="button" class="btn-qty" onclick="updateQty(this, -1)">−</button>
                   <span class="qty-number">0</span>
                   <button type="button" class="btn-qty" onclick="updateQty(this, 1)">+</button>
                 </div>
@@ -636,7 +597,7 @@
           title,
           desc,
           price,
-          img: imgUrl || (editIndex >= 0 ? products[editIndex].img : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80')
+          img: imgUrl || (editIndex >= 0 ? products[editIndex].img : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300')
         };
 
         if (editIndex >= 0) {
@@ -648,12 +609,12 @@
         localStorage.setItem('bento_products', JSON.stringify(products));
         renderProducts();
         resetAdminForm();
-        alert('餐盒商品已儲存！');
+        alert('✅ 商品已儲存！');
       };
 
       if (imgInput.files && imgInput.files[0]) {
         const reader = new FileReader();
-        reader.onload = function (e) { processSave(e.target.result); };
+        reader.onload = function(e) { processSave(e.target.result); };
         reader.readAsDataURL(imgInput.files[0]);
       } else {
         processSave(null);
@@ -687,7 +648,9 @@
       document.getElementById('admin-form-title').innerText = "➕ 新增餐盒品項";
     }
 
-    // 7. 數量與總額計算
+    // ============================================================
+    // 訂單功能
+    // ============================================================
     function updateQty(btn, change) {
       const qtySpan = btn.parentElement.querySelector('.qty-number');
       let currentQty = parseInt(qtySpan.innerText, 10) + change;
@@ -700,21 +663,23 @@
       let total = 0;
       const cards = document.querySelectorAll('.product-card');
       cards.forEach(card => {
-        const index = card.dataset.index;
+        const index = parseInt(card.dataset.index, 10);
         const qty = parseInt(card.querySelector('.qty-number').innerText, 10);
-        total += products[index].price * qty;
+        if (!isNaN(index) && products[index]) {
+          total += products[index].price * qty;
+        }
       });
       document.getElementById('total-amount').innerText = total;
     }
 
-    // 8. 傳送訂單至 LINE
-    function sendToLine() {
+    // ============================================================
+    // 發送訂單到 LINE（使用 LIFF）
+    // ============================================================
+    async function sendToLine() {
       const name = document.getElementById('name').value.trim();
       const phone = document.getElementById('phone').value.trim();
-      const memberPhone = document.getElementById('member-phone').value.trim();
       const date = document.getElementById('pickup-date').value;
       const time = document.getElementById('pickup-time').value;
-      const note = document.getElementById('note').value.trim();
 
       if (!name || !phone || !date || !time) {
         alert('請完整填寫訂購人資訊與預計取餐時間！');
@@ -724,10 +689,10 @@
       let orderItems = "";
       const cards = document.querySelectorAll('.product-card');
       cards.forEach(card => {
-        const index = card.dataset.index;
+        const index = parseInt(card.dataset.index, 10);
         const qty = parseInt(card.querySelector('.qty-number').innerText, 10);
-        if (qty > 0) {
-          orderItems += `🍱 ${products[index].title} x ${qty} ($${products[index].price * qty})\n`;
+        if (qty > 0 && !isNaN(index) && products[index]) {
+          orderItems += `🍱 ${products[index].title} x ${qty} (NT$${products[index].price * qty})\n`;
         }
       });
 
@@ -737,31 +702,130 @@
       }
 
       const totalAmount = document.getElementById('total-amount').innerText;
-      
-      let message = `【餐盒預訂單】\n` +
-                    `姓名：${name}\n` +
-                    `聯絡電話：${phone}\n`;
+      const message =
+        `【日和便當 · 餐盒預訂單】\n` +
+        `────────────────\n` +
+        `👤 姓名：${name}\n` +
+        `📞 電話：${phone}\n` +
+        `📅 取餐日期：${date}\n` +
+        `🕐 取餐時間：${time}\n` +
+        `────────────────\n` +
+        `📋 訂購品項：\n${orderItems}` +
+        `────────────────\n` +
+        `💰 總金額：NT$ ${totalAmount}\n` +
+        `────────────────\n` +
+        `感謝您的訂購 ❤️ 我們將盡快為您準備！`;
 
-      if (memberPhone) {
-        message += `會員集點電話：${memberPhone}\n`;
+      const btn = document.getElementById('sendOrderBtn');
+      btn.disabled = true;
+      btn.innerText = '⏳ 傳送中...';
+
+      try {
+        // 方法1：使用 LIFF sendMessages（需要在 LINE 內開啟）
+        if (liffReady && liff.isLoggedIn() && liff.isInClient()) {
+          const flexMessage = buildFlexMessage(name, phone, date, time, orderItems, totalAmount);
+          await liff.sendMessages([flexMessage]);
+          alert('✅ 訂單已成功傳送至 LINE 聊天室！');
+          // 清空數量
+          document.querySelectorAll('.qty-number').forEach(el => el.innerText = '0');
+          calculateTotal();
+          document.getElementById('name').value = '';
+          document.getElementById('phone').value = '';
+        } else {
+          // 方法2：備用方案 - 使用 LINE URL Scheme（可在瀏覽器或 LINE 內使用）
+          const lineId = '2011112664'; // 你的 LINE 官方帳號 ID（純數字）
+          const encodedMsg = encodeURIComponent(message);
+          window.open(`https://line.me/R/oaMessage/${lineId}/?${encodedMsg}`, '_blank');
+          alert('✅ 已開啟 LINE，請手動發送訂單訊息！');
+        }
+      } catch (error) {
+        console.error('發送失敗:', error);
+        alert('❌ 發送失敗，請確認 LIFF 設定是否正確。\n錯誤訊息：' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '📤 送出餐盒預訂 (LINE)';
       }
-
-      message += `取餐日期：${date}\n` +
-                 `取餐時間：${time}\n`;
-
-      if (note) {
-        message += `訂購備註：${note}\n`;
-      }
-
-      message += `------------------\n` +
-                 `訂購品項：\n${orderItems}` +
-                 `------------------\n` +
-                 `總金額：NT$ ${totalAmount}`;
-
-      const cleanLineId = LINE_OFFICIAL_ACCOUNT_ID.replace(/^@/, '');
-      window.location.href = `https://line.me/R/oaMessage/${cleanLineId}/?${encodeURIComponent(message)}`;
     }
 
+    // ============================================================
+    // 建立 Flex Message
+    // ============================================================
+    function buildFlexMessage(name, phone, date, time, orderItems, total) {
+      // 解析訂單品項為 Flex 格式
+      const itemLines = orderItems.split('\n').filter(line => line.trim() !== '');
+      const itemContents = itemLines.map(line => {
+        const match = line.match(/🍱 (.+) x (\d+) \(NT\$(\d+)\)/);
+        if (match) {
+          return {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: match[1], flex: 3, size: "sm" },
+              { type: "text", text: `x ${match[2]}`, flex: 1, align: "center", size: "sm" },
+              { type: "text", text: `$${match[3]}`, flex: 1, align: "end", size: "sm" }
+            ]
+          };
+        }
+        return null;
+      }).filter(item => item !== null);
+
+      const bodyContents = [
+        { type: "text", text: "🍱 日和便當 · 餐盒預訂", weight: "bold", size: "lg" },
+        { type: "text", text: "新訂單通知", color: "#aaaaaa", size: "sm" },
+        { type: "separator", margin: "md" },
+        { type: "text", text: `👤 姓名：${name}`, size: "sm" },
+        { type: "text", text: `📞 電話：${phone}`, size: "sm" },
+        { type: "text", text: `📅 取餐日期：${date}`, size: "sm" },
+        { type: "text", text: `🕐 取餐時間：${time}`, size: "sm" },
+        { type: "separator", margin: "md" },
+        { type: "text", text: "📋 訂購品項", weight: "bold", size: "sm" }
+      ];
+
+      itemContents.forEach((item, index) => {
+        bodyContents.push(item);
+        if (index < itemContents.length - 1) {
+          bodyContents.push({ type: "separator", margin: "sm" });
+        }
+      });
+
+      bodyContents.push(
+        { type: "separator", margin: "md" },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "💰 總金額", weight: "bold", size: "md" },
+            { type: "text", text: `$${total}`, weight: "bold", size: "md", align: "end", color: "#c0392b" }
+          ]
+        },
+        { type: "separator", margin: "md" },
+        { type: "text", text: "感謝您的訂購 ❤️", align: "center", size: "sm", color: "#888888" }
+      );
+
+      return {
+        type: "flex",
+        altText: `日和便當訂單 - 總計 $${total}`,
+        contents: {
+          type: "bubble",
+          body: {
+            type: "box",
+            layout: "vertical",
+            contents: bodyContents
+          },
+          footer: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              { type: "text", text: "我們將盡快為您準備！", align: "center", size: "xs", color: "#aaaaaa" }
+            ]
+          }
+        }
+      };
+    }
+
+    // ============================================================
+    // 啟動
+    // ============================================================
     window.onload = init;
   </script>
 </body>
