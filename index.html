@@ -284,6 +284,30 @@
       min-height: 60px;
     }
 
+    /* 勾選框樣式 */
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      padding: 4px 0;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--green-accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .checkbox-group label {
+      font-size: 14px;
+      color: var(--text-dark);
+      cursor: pointer;
+      user-select: none;
+    }
+
     .summary-box {
       background: var(--card-bg);
       padding: 16px;
@@ -390,6 +414,10 @@
     <div class="form-group">
       <label for="member-phone">會員電話 (集點用，無會員免填)</label>
       <input type="tel" id="member-phone" placeholder="例：0912345678">
+      <div class="checkbox-group">
+        <input type="checkbox" id="same-as-phone" onchange="toggleMemberPhone()">
+        <label for="same-as-phone">同聯絡電話</label>
+      </div>
     </div>
     <div class="form-group">
       <label for="pickup-date">取餐日期 *</label>
@@ -426,7 +454,7 @@
     const OFFICIAL_ACCOUNT_ID = "473lfggk";
 
     // ============================================================
-    // 預設餐點（恢復原本的餐點）
+    // 預設餐點
     // ============================================================
     const defaultNotice = "🍱 請於早上九點前預訂，送出訂單後將自動傳送訂購細項，等待回覆確認即完成預訂！";
     const defaultProducts = [{
@@ -500,6 +528,38 @@
           liffReady = false;
         });
     }
+
+    // ============================================================
+    // 「同聯絡電話」勾選功能
+    // ============================================================
+    function toggleMemberPhone() {
+      const checked = document.getElementById('same-as-phone').checked;
+      const phoneInput = document.getElementById('phone');
+      const memberInput = document.getElementById('member-phone');
+
+      if (checked) {
+        memberInput.value = phoneInput.value;
+        memberInput.disabled = true;
+        memberInput.style.opacity = '0.7';
+      } else {
+        memberInput.value = '';
+        memberInput.disabled = false;
+        memberInput.style.opacity = '1';
+      }
+    }
+
+    // 當聯絡電話變更時，如果有勾「同聯絡電話」，自動同步
+    document.addEventListener('DOMContentLoaded', function() {
+      const phoneInput = document.getElementById('phone');
+      const memberInput = document.getElementById('member-phone');
+      const sameCheckbox = document.getElementById('same-as-phone');
+
+      phoneInput.addEventListener('input', function() {
+        if (sameCheckbox.checked) {
+          memberInput.value = this.value;
+        }
+      });
+    });
 
     // ============================================================
     // 管理者功能
@@ -786,6 +846,9 @@
       document.getElementById('phone').value = '';
       document.getElementById('member-phone').value = '';
       document.getElementById('note').value = '';
+      document.getElementById('same-as-phone').checked = false;
+      document.getElementById('member-phone').disabled = false;
+      document.getElementById('member-phone').style.opacity = '1';
     }
 
     // ============================================================
