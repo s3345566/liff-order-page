@@ -208,13 +208,16 @@
     }
 
     // ============================================================
-    // LIFF 初始化（取得顧客 ID）
+    // LIFF 初始化（加入 withLoginOnExternalBrowser 參數）
     // ============================================================
     function initLIFF() {
       const statusEl = document.getElementById('liffStatus');
       statusEl.innerText = '⏳ LIFF 初始化中...';
 
-      liff.init({ liffId: LIFF_ID })
+      liff.init({ 
+        liffId: LIFF_ID,
+        withLoginOnExternalBrowser: true
+      })
         .then(() => {
           liffReady = true;
           if (!liff.isLoggedIn()) {
@@ -222,7 +225,6 @@
             liff.login();
             return;
           }
-          // 取得顧客資料
           liff.getProfile()
             .then(profile => {
               userProfile = profile;
@@ -576,7 +578,7 @@
     }
 
     // ============================================================
-    // ⭐ 透過 Messaging API 發送卡片到官方帳號
+    // ⭐ 發送卡片
     // ============================================================
     async function sendToLine() {
       const name = document.getElementById('name').value.trim();
@@ -612,8 +614,14 @@
       btn.innerText = '⏳ 傳送中...';
 
       try {
-        // 檢查 LIFF 是否就緒
-        if (!liffReady || !liff.isLoggedIn()) {
+        if (!liffReady) {
+          alert('請稍候，LIFF 尚未初始化完成！');
+          btn.disabled = false;
+          btn.innerText = '📤 送出餐盒預訂 (LINE)';
+          return;
+        }
+
+        if (!liff.isLoggedIn()) {
           alert('請先登入 LINE！');
           liff.login();
           btn.disabled = false;
@@ -621,9 +629,9 @@
           return;
         }
 
-        // 檢查是否有顧客資料
-        if (!userProfile || !userProfile.userId) {
-          alert('無法取得您的 LINE ID，請重新登入！');
+        // 檢查是否在 LINE 內
+        if (!liff.isInClient()) {
+          alert('請在 LINE 應用程式內開啟此頁面！');
           btn.disabled = false;
           btn.innerText = '📤 送出餐盒預訂 (LINE)';
           return;
@@ -632,15 +640,10 @@
         // 建立 Flex Message 卡片
         const flexMessage = buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, totalAmount);
 
-        // 透過 Messaging API 推送到顧客的聊天室（或官方帳號）
-        // 由於我們要送到官方帳號，但 push 需要顧客的 userId
-        // 我們改為發送到顧客自己的聊天室（但顯示為官方帳號發送）
-        // 實際上，顧客會在自己的聊天室收到卡片
-
-        // 發送到顧客自己的聊天室（使用 LIFF）
+        // 發送卡片到當前聊天室（哈囉食堂官方帳號聊天室）
         await liff.sendMessages([flexMessage]);
 
-        alert('✅ 訂單卡片已成功傳送！');
+        alert('✅ 訂單卡片已成功傳送到「哈囉食堂」聊天室！');
 
         // 清空表單
         document.querySelectorAll('.qty-number').forEach(el => el.innerText = '0');
@@ -655,7 +658,18 @@
 
       } catch (error) {
         console.error('❌ 發送失敗:', error);
-        alert('❌ 發送失敗，請重試！\n錯誤訊息：' + error.message);
+
+        // 顯示詳細錯誤資訊
+        let errorMsg = '發送失敗！\n';
+        if (error.message) {
+          errorMsg += '錯誤訊息：' + error.message + '\n';
+        }
+        if (error.code) {
+          errorMsg += '錯誤代碼：' + error.code + '\n';
+        }
+        errorMsg += '\n請確認：\n1. 是否在 LINE 內開啟\n2. LIFF 權限是否有 chat_message.write';
+
+        alert(errorMsg);
       } finally {
         btn.disabled = false;
         btn.innerText = '📤 送出餐盒預訂 (LINE)';
