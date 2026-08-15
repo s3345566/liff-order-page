@@ -442,14 +442,12 @@
     function initLIFF() {
       const statusEl = document.getElementById('liffStatus');
       statusEl.innerText = 'LIFF 初始化中...';
-      statusEl.style.color = '#a88367';
 
       liff.init({ liffId: LIFF_ID })
         .then(() => {
           liffReady = true;
           if (!liff.isLoggedIn()) {
             statusEl.innerText = '請登入 LINE';
-            statusEl.style.color = '#c95b5b';
             liff.login();
             return;
           }
@@ -458,18 +456,15 @@
               userProfile = profile;
               console.log('顧客資料:', profile);
               statusEl.innerText = '已就緒，可直接傳送訂單！';
-              statusEl.style.color = '#798a6d';
             })
             .catch(err => {
               console.error('取得顧客資料失敗:', err);
               statusEl.innerText = '請重新登入';
-              statusEl.style.color = '#c95b5b';
             });
         })
         .catch((err) => {
           console.error('LIFF 初始化失敗:', err);
           statusEl.innerText = 'LIFF 初始化失敗';
-          statusEl.style.color = '#c95b5b';
           liffReady = false;
         });
     }
