@@ -1,682 +1,78 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>日系手作餐盒預購系統</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <style>
-    :root {
-      --bg-color: #f7f4ee;
-      --card-bg: #ffffff;
-      --primary-color: #6b513e;
-      --accent-color: #a88367;
-      --text-dark: #4a423a;
-      --border-color: #e8e2d8;
-      --green-accent: #798a6d;
-      --danger-color: #c95b5b;
+async function sendToLine() {
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const memberPhone = document.getElementById('member-phone').value.trim();
+  const date = document.getElementById('pickup-date').value;
+  const time = document.getElementById('pickup-time').value;
+  const note = document.getElementById('note').value.trim();
+
+  if (!name || !phone || !date || !time) {
+    alert('請完整填寫訂購人資訊與預計取餐時間！');
+    return;
+  }
+
+  let orderItems = "";
+  const cards = document.querySelectorAll('.product-card');
+  cards.forEach(card => {
+    const index = parseInt(card.dataset.index, 10);
+    const qty = parseInt(card.querySelector('.qty-number').innerText, 10);
+    if (qty > 0 && !isNaN(index) && products[index]) {
+      orderItems += `🍱 ${products[index].title} x ${qty} (NT$${products[index].price * qty})\n`;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Noto Sans TC", sans-serif; }
-    body { background-color: var(--bg-color); color: var(--text-dark); padding: 20px 12px; max-width: 480px; margin: 0 auto; }
-    .top-bar { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 8px; min-height: 30px; }
-    .admin-only { display: none !important; }
-    body.is-admin .admin-only { display: block !important; }
-    .btn-admin-logout { background: #c95b5b; color: white; border: none; padding: 4px 10px; border-radius: 12px; font-size: 12px; cursor: pointer; }
-    header { text-align: center; margin-bottom: 20px; cursor: pointer; user-select: none; }
-    header h1 { font-size: 22px; letter-spacing: 2px; color: #6b513e; margin-bottom: 6px; }
-    header p { font-size: 13px; color: #a88367; }
-    .notice-box { background-color: #efebe4; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.5; margin-bottom: 20px; border-left: 4px solid #798a6d; color: #5c5346; white-space: pre-wrap; }
-    .admin-panel { background: #ffffff; border: 2px dashed #a88367; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
-    .admin-panel h3 { font-size: 16px; color: #6b513e; margin-bottom: 12px; }
-    .admin-section { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px dashed #e8e2d8; }
-    .admin-form-group { margin-bottom: 10px; }
-    .admin-form-group label { display: block; font-size: 12px; margin-bottom: 4px; color: #6b513e; font-weight: bold; }
-    .admin-form-group input, .admin-form-group textarea { width: 100%; padding: 8px; border: 1px solid #e8e2d8; border-radius: 6px; font-size: 13px; }
-    .btn-save-primary { width: 100%; background: #798a6d; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 8px; }
-    .btn-danger { background: #c95b5b; color: white; border: none; padding: 2px 8px; border-radius: 12px; font-size: 11px; cursor: pointer; margin-left: 4px; }
-    .time-tag { display: inline-block; background: #efebe4; padding: 4px 10px; border-radius: 12px; font-size: 13px; margin: 3px 4px 3px 0; }
-    .time-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-    .product-card { background: #ffffff; border-radius: 12px; padding: 12px; margin-bottom: 16px; display: flex; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1px solid #e8e2d8; }
-    .product-img { width: 95px; height: 95px; border-radius: 8px; object-fit: cover; background-color: #f0f0f0; }
-    .product-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-    .product-title { font-size: 15px; font-weight: 600; color: #6b513e; margin-bottom: 4px; }
-    .product-desc { font-size: 12px; color: #8c8275; line-height: 1.4; margin-bottom: 8px; }
-    .product-bottom { display: flex; justify-content: space-between; align-items: center; }
-    .product-price { font-weight: bold; color: #6b513e; font-size: 15px; }
-    .quantity-control { display: flex; align-items: center; gap: 8px; background: #f7f4ee; border-radius: 20px; padding: 2px 6px; }
-    .btn-qty { width: 24px; height: 24px; border-radius: 50%; border: none; background: #ffffff; color: #6b513e; font-weight: bold; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .qty-number { font-size: 14px; font-weight: 600; min-width: 16px; text-align: center; }
-    .admin-actions { display: flex; gap: 8px; margin-top: 8px; }
-    .btn-admin-action { font-size: 11px; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; }
-    .btn-delete { background: #c95b5b; color: white; }
-    .btn-edit { background: #a88367; color: white; }
-    .section-title { font-size: 16px; color: #6b513e; margin: 24px 0 12px 0; border-bottom: 2px solid #e8e2d8; padding-bottom: 6px; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 13px; margin-bottom: 4px; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #e8e2d8; border-radius: 8px; background: #ffffff; font-size: 14px; outline: none; color: #4a423a; font-family: inherit; }
-    .form-group textarea { resize: vertical; min-height: 60px; }
-    .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 4px 0; }
-    .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; accent-color: #798a6d; cursor: pointer; flex-shrink: 0; }
-    .checkbox-group label { font-size: 14px; color: #4a423a; cursor: pointer; user-select: none; }
-    .summary-box { background: #ffffff; padding: 16px; border-radius: 12px; margin-top: 20px; border: 1px solid #e8e2d8; }
-    .total-price { font-size: 18px; font-weight: bold; color: #6b513e; text-align: right; margin-bottom: 16px; }
-    .btn-submit { width: 100%; background-color: #6b513e; color: #ffffff; border: none; padding: 14px; border-radius: 30px; font-size: 16px; font-weight: bold; cursor: pointer; letter-spacing: 1px; }
-    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-    .liff-status { text-align: center; font-size: 12px; color: #a88367; margin-top: 8px; }
-  </style>
-</head>
-<body>
+  });
 
-  <div class="top-bar">
-    <button class="btn-admin-logout admin-only" onclick="adminLogout()">🔒 退出管理模式</button>
-  </div>
+  if (!orderItems) {
+    alert('請至少選擇一款餐盒數量！');
+    return;
+  }
 
-  <header onclick="handleHeaderClick()">
-    <h1>日和便當 ‧ 手作餐盒</h1>
-    <p>每日現做 ‧ 健康溫馨預購</p>
-  </header>
+  const totalAmount = document.getElementById('total-amount').innerText;
+  const btn = document.getElementById('sendOrderBtn');
+  btn.disabled = true;
+  btn.innerText = '⏳ 傳送中...';
 
-  <div class="notice-box" id="notice-display">
-    🍱 請於早上九點前預訂，送出訂單後將自動傳送訂購細項，等待回覆確認即完成預訂！
-  </div>
-
-  <div class="admin-panel admin-only">
-    <div class="admin-section">
-      <h3>📢 編輯系統公告</h3>
-      <div class="admin-form-group">
-        <textarea id="input-notice" rows="3" placeholder="請輸入最新公告內容..."></textarea>
-      </div>
-      <button class="btn-save-primary" onclick="saveNotice()">儲存並發布公告</button>
-    </div>
-    <div class="admin-section">
-      <h3>🕐 管理取餐時段</h3>
-      <div class="admin-form-group">
-        <label>新增時段（例如：13:00 - 13:30）</label>
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="input-new-time" placeholder="13:00 - 13:30" style="flex:1;">
-          <button class="btn-save-primary" onclick="addTimeSlot()" style="width:auto; padding:10px 20px; margin-top:0;">➕ 新增</button>
-        </div>
-      </div>
-      <div>
-        <label>目前時段：</label>
-        <div class="time-list" id="time-list-display"></div>
-      </div>
-    </div>
-    <div>
-      <h3 id="admin-form-title">➕ 新增餐盒品項</h3>
-      <input type="hidden" id="edit-index" value="-1">
-      <div class="admin-form-group">
-        <label>餐盒名稱 *</label>
-        <input type="text" id="input-title" placeholder="例如：日式照燒雞腿餐盒">
-      </div>
-      <div class="admin-form-group">
-        <label>簡介/食材說明</label>
-        <textarea id="input-desc" rows="2" placeholder="例如：現煎雞腿排 × 溫熱時蔬 × 藜麥飯"></textarea>
-      </div>
-      <div class="admin-form-group">
-        <label>售價 (NT$) *</label>
-        <input type="number" id="input-price" placeholder="例如：150">
-      </div>
-      <div class="admin-form-group">
-        <label>上傳照片</label>
-        <input type="file" id="input-img" accept="image/*">
-      </div>
-      <button class="btn-save-primary" onclick="saveProduct()">儲存餐盒商品</button>
-    </div>
-  </div>
-
-  <div id="product-list"></div>
-
-  <div class="section-title">訂購人資訊</div>
-  <form id="order-form">
-    <div class="form-group">
-      <label for="name">訂購人姓名 *</label>
-      <input type="text" id="name" required placeholder="例如：陳小姐">
-    </div>
-    <div class="form-group">
-      <label for="phone">聯絡電話 *</label>
-      <input type="tel" id="phone" required placeholder="例：0912345678">
-    </div>
-    <div class="form-group">
-      <label for="member-phone">會員電話 (集點用，無會員免填)</label>
-      <input type="tel" id="member-phone" placeholder="例：0912345678">
-      <div class="checkbox-group">
-        <input type="checkbox" id="same-as-phone" onchange="toggleMemberPhone()">
-        <label for="same-as-phone">同聯絡電話</label>
-      </div>
-    </div>
-    <div class="form-group">
-      <label for="pickup-date">取餐日期 *</label>
-      <input type="date" id="pickup-date" required>
-    </div>
-    <div class="form-group">
-      <label for="pickup-time">預計取餐時間 *</label>
-      <select id="pickup-time" required>
-        <option value="">-- 請選擇時間段 --</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="note">備註 (特殊需求請填寫)</label>
-      <textarea id="note" rows="2" placeholder="例如：不要辣 / 餐具多一份"></textarea>
-    </div>
-  </form>
-
-  <div class="summary-box">
-    <div class="total-price">總金額：NT$<span id="total-amount">0</span></div>
-    <button class="btn-submit" id="sendOrderBtn" onclick="sendToLine()">📤 送出餐盒預訂 (LINE)</button>
-    <div class="liff-status" id="liffStatus">⏳ LIFF 初始化中...</div>
-  </div>
-
-  <script>
-    // ============================================================
-    // 🔐 設定區
-    // ============================================================
-    const ADMIN_PASSWORD = "55688";
-    const LIFF_ID = "2011112664-289oMrlD";
-    const CHANNEL_ACCESS_TOKEN = "VTHoR5LzqRGk663DdVGWMVMRD7VNnGDx5fFT/1XdSIhmtDzLodaEKb5jfdBb0a6JsyvBJF+RcSJ2xoJuZHclgNq25oxjCzDZYwx6j2geXX2a2aDcph50ccCskF1Ghmtt8YIG9dodrYRNpUTn8tpmXgdB04t89/1O/w1cDnyilFU=";
-
-    const defaultNotice = "🍱 請於早上九點前預訂，送出訂單後將自動傳送訂購細項，等待回覆確認即完成預訂！";
-    const defaultProducts = [
-      { title: "蘑菇鐵板麵餐盒", desc: "鐵板麵 × 太陽蛋 × 季節時蔬", price: 65, img: "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300" },
-      { title: "黑胡椒雞柳餐盒", desc: "雞肉 × 太陽蛋 × 時蔬", price: 90, img: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=300" },
-      { title: "蔥鹽雞腿餐盒", desc: "雞肉 × 太陽蛋 × 時蔬", price: 90, img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300" }
-    ];
-    const defaultTimeSlots = ["11:30 - 12:00", "12:00 - 12:30", "12:30 - 13:00"];
-
-    let products = [], timeSlots = [], clickCount = 0, clickTimer = null, liffReady = false, userProfile = null;
-
-    // ============================================================
-    // 初始化
-    // ============================================================
-    function init() {
-      const savedProducts = localStorage.getItem('bento_products');
-      products = savedProducts ? JSON.parse(savedProducts) : defaultProducts;
-      const savedNotice = localStorage.getItem('bento_notice');
-      document.getElementById('notice-display').innerText = savedNotice || defaultNotice;
-      document.getElementById('input-notice').value = savedNotice || defaultNotice;
-      const savedTimeSlots = localStorage.getItem('bento_timeslots');
-      timeSlots = savedTimeSlots ? JSON.parse(savedTimeSlots) : defaultTimeSlots;
-      checkAdminStatus();
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      document.getElementById('pickup-date').min = tomorrow.toISOString().split('T')[0];
-      document.getElementById('pickup-date').value = tomorrow.toISOString().split('T')[0];
-      renderProducts();
-      renderTimeSlots();
-      populateTimeSelect();
-      initLIFF();
+  try {
+    if (!liffReady) {
+      alert('請稍候，LIFF 尚未初始化完成！');
+      btn.disabled = false;
+      btn.innerText = '📤 送出餐盒預訂 (LINE)';
+      return;
     }
 
-    // ============================================================
-    // LIFF 初始化（加入 withLoginOnExternalBrowser 參數）
-    // ============================================================
-    function initLIFF() {
-      const statusEl = document.getElementById('liffStatus');
-      statusEl.innerText = '⏳ LIFF 初始化中...';
-
-      liff.init({ 
-        liffId: LIFF_ID,
-        withLoginOnExternalBrowser: true
-      })
-        .then(() => {
-          liffReady = true;
-          if (!liff.isLoggedIn()) {
-            statusEl.innerText = '🔑 請登入 LINE';
-            liff.login();
-            return;
-          }
-          liff.getProfile()
-            .then(profile => {
-              userProfile = profile;
-              console.log('✅ 顧客資料:', profile);
-              statusEl.innerText = '✅ 已就緒，可直接傳送訂單！';
-            })
-            .catch(err => {
-              console.error('❌ 取得顧客資料失敗:', err);
-              statusEl.innerText = '⚠️ 請重新登入';
-            });
-        })
-        .catch((err) => {
-          console.error('❌ LIFF 初始化失敗:', err);
-          statusEl.innerText = '⚠️ LIFF 初始化失敗';
-          liffReady = false;
-        });
+    if (!liff.isLoggedIn()) {
+      alert('請先登入 LINE！');
+      liff.login();
+      btn.disabled = false;
+      btn.innerText = '📤 送出餐盒預訂 (LINE)';
+      return;
     }
 
-    // ============================================================
-    // 取餐時段管理
-    // ============================================================
-    function renderTimeSlots() {
-      const container = document.getElementById('time-list-display');
-      container.innerHTML = '';
-      const isAdmin = sessionStorage.getItem('is_admin') === 'true';
-      if (timeSlots.length === 0) {
-        container.innerHTML = '<span style="color:#aaa;font-size:13px;">尚無時段，請新增</span>';
-        return;
-      }
-      timeSlots.forEach((slot, index) => {
-        const span = document.createElement('span');
-        span.className = 'time-tag';
-        span.textContent = slot;
-        if (isAdmin) {
-          const delBtn = document.createElement('button');
-          delBtn.className = 'btn-danger';
-          delBtn.textContent = '✕';
-          delBtn.onclick = function(e) { e.stopPropagation(); deleteTimeSlot(index); };
-          span.appendChild(delBtn);
-        }
-        container.appendChild(span);
-      });
-    }
+    // ⭐ 移除 liff.isInClient() 檢查，直接嘗試發送
 
-    function populateTimeSelect() {
-      const select = document.getElementById('pickup-time');
-      select.innerHTML = '<option value="">-- 請選擇時間段 --</option>';
-      timeSlots.forEach(slot => {
-        const option = document.createElement('option');
-        option.value = slot;
-        option.textContent = slot;
-        select.appendChild(option);
-      });
-    }
-
-    function addTimeSlot() {
-      const input = document.getElementById('input-new-time');
-      const value = input.value.trim();
-      if (!value) { alert('請輸入時段！'); return; }
-      if (timeSlots.includes(value)) { alert('此時段已存在！'); return; }
-      timeSlots.push(value);
-      localStorage.setItem('bento_timeslots', JSON.stringify(timeSlots));
-      input.value = '';
-      renderTimeSlots();
-      populateTimeSelect();
-      alert('✅ 時段已新增！');
-    }
-
-    function deleteTimeSlot(index) {
-      if (confirm(`確定要刪除「${timeSlots[index]}」嗎？`)) {
-        timeSlots.splice(index, 1);
-        localStorage.setItem('bento_timeslots', JSON.stringify(timeSlots));
-        renderTimeSlots();
-        populateTimeSelect();
-        alert('✅ 時段已刪除！');
-      }
-    }
-
-    // ============================================================
-    // 其他功能
-    // ============================================================
-    function toggleMemberPhone() {
-      const checked = document.getElementById('same-as-phone').checked;
-      const phoneInput = document.getElementById('phone');
-      const memberInput = document.getElementById('member-phone');
-      if (checked) {
-        memberInput.value = phoneInput.value;
-        memberInput.disabled = true;
-        memberInput.style.opacity = '0.7';
-      } else {
-        memberInput.value = '';
-        memberInput.disabled = false;
-        memberInput.style.opacity = '1';
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-      const phoneInput = document.getElementById('phone');
-      const memberInput = document.getElementById('member-phone');
-      const sameCheckbox = document.getElementById('same-as-phone');
-      phoneInput.addEventListener('input', function() {
-        if (sameCheckbox.checked) {
-          memberInput.value = this.value;
-        }
-      });
-    });
-
-    function handleHeaderClick() {
-      clickCount++;
-      clearTimeout(clickTimer);
-      if (clickCount >= 3) {
-        clickCount = 0;
-        triggerAdminLogin();
-      } else {
-        clickTimer = setTimeout(() => { clickCount = 0; }, 1000);
-      }
-    }
-
-    function triggerAdminLogin() {
-      if (sessionStorage.getItem('is_admin') === 'true') {
-        alert('您已處於管理者登入狀態！');
-        return;
-      }
-      const inputPwd = prompt('🔐 請輸入管理者驗證密碼：');
-      if (inputPwd === ADMIN_PASSWORD) {
-        sessionStorage.setItem('is_admin', 'true');
-        checkAdminStatus();
-        alert('✅ 驗證成功！已開啟管理者功能。');
-      } else if (inputPwd !== null) {
-        alert('❌ 密碼錯誤！');
-      }
-    }
-
-    function checkAdminStatus() {
-      const isAdmin = sessionStorage.getItem('is_admin') === 'true';
-      document.body.classList.toggle('is-admin', isAdmin);
-      renderProducts();
-      renderTimeSlots();
-    }
-
-    function adminLogout() {
-      sessionStorage.removeItem('is_admin');
-      checkAdminStatus();
-      alert('已退出管理者模式！');
-    }
-
-    function saveNotice() {
-      const text = document.getElementById('input-notice').value.trim();
-      if (!text) { alert('公告內容不可為空！'); return; }
-      localStorage.setItem('bento_notice', text);
-      document.getElementById('notice-display').innerText = text;
-      alert('✅ 公告已更新！');
-    }
-
-    function renderProducts() {
-      const container = document.getElementById('product-list');
-      container.innerHTML = "";
-      const isAdmin = sessionStorage.getItem('is_admin') === 'true';
-      products.forEach((prod, index) => {
-        const html = `
-          <div class="product-card" data-index="${index}">
-            <img src="${prod.img}" alt="${prod.title}" class="product-img" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300'">
-            <div class="product-info">
-              <div>
-                <div class="product-title">${prod.title}</div>
-                <div class="product-desc">${prod.desc}</div>
-              </div>
-              <div class="product-bottom">
-                <span class="product-price">NT$${prod.price}</span>
-                <div class="quantity-control">
-                  <button type="button" class="btn-qty" onclick="updateQty(this, -1)">−</button>
-                  <span class="qty-number">0</span>
-                  <button type="button" class="btn-qty" onclick="updateQty(this, 1)">+</button>
-                </div>
-              </div>
-              ${isAdmin ? `
-                <div class="admin-actions">
-                  <button type="button" class="btn-admin-action btn-edit" onclick="editProduct(${index})">✏️ 編輯</button>
-                  <button type="button" class="btn-admin-action btn-delete" onclick="deleteProduct(${index})">🗑️ 刪除</button>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        `;
-        container.innerHTML += html;
-      });
-      calculateTotal();
-    }
-
-    function saveProduct() {
-      const title = document.getElementById('input-title').value.trim();
-      const desc = document.getElementById('input-desc').value.trim();
-      const price = parseInt(document.getElementById('input-price').value, 10);
-      const imgInput = document.getElementById('input-img');
-      const editIndex = parseInt(document.getElementById('edit-index').value, 10);
-      if (!title || isNaN(price) || price < 0) {
-        alert('請填寫完整餐盒名稱與正確售價！');
-        return;
-      }
-      const processSave = (imgUrl) => {
-        const newProduct = {
-          title,
-          desc,
-          price,
-          img: imgUrl || (editIndex >= 0 ? products[editIndex].img : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300')
-        };
-        if (editIndex >= 0) {
-          products[editIndex] = newProduct;
-        } else {
-          products.push(newProduct);
-        }
-        localStorage.setItem('bento_products', JSON.stringify(products));
-        renderProducts();
-        resetAdminForm();
-        alert('✅ 商品已儲存！');
-      };
-      if (imgInput.files && imgInput.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) { processSave(e.target.result); };
-        reader.readAsDataURL(imgInput.files[0]);
-      } else {
-        processSave(null);
-      }
-    }
-
-    function deleteProduct(index) {
-      if (confirm(`確定要刪除「${products[index].title}」嗎？`)) {
-        products.splice(index, 1);
-        localStorage.setItem('bento_products', JSON.stringify(products));
-        renderProducts();
-      }
-    }
-
-    function editProduct(index) {
-      const prod = products[index];
-      document.getElementById('input-title').value = prod.title;
-      document.getElementById('input-desc').value = prod.desc;
-      document.getElementById('input-price').value = prod.price;
-      document.getElementById('edit-index').value = index;
-      document.getElementById('admin-form-title').innerText = "✏️ 編輯餐盒品項";
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function resetAdminForm() {
-      document.getElementById('input-title').value = "";
-      document.getElementById('input-desc').value = "";
-      document.getElementById('input-price').value = "";
-      document.getElementById('input-img').value = "";
-      document.getElementById('edit-index').value = "-1";
-      document.getElementById('admin-form-title').innerText = "➕ 新增餐盒品項";
-    }
-
-    function updateQty(btn, change) {
-      const qtySpan = btn.parentElement.querySelector('.qty-number');
-      let currentQty = parseInt(qtySpan.innerText, 10) + change;
-      if (currentQty < 0) currentQty = 0;
-      qtySpan.innerText = currentQty;
-      calculateTotal();
-    }
-
-    function calculateTotal() {
-      let total = 0;
-      const cards = document.querySelectorAll('.product-card');
-      cards.forEach(card => {
-        const index = parseInt(card.dataset.index, 10);
-        const qty = parseInt(card.querySelector('.qty-number').innerText, 10);
-        if (!isNaN(index) && products[index]) {
-          total += products[index].price * qty;
-        }
-      });
-      document.getElementById('total-amount').innerText = total;
-    }
-
-    // ============================================================
     // 建立 Flex Message 卡片
-    // ============================================================
-    function buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, total) {
-      let totalQty = 0;
-      const itemLines = orderItems.split('\n').filter(line => line.trim() !== '');
-      const itemContents = itemLines.map(line => {
-        const match = line.match(/🍱 (.+) x (\d+) \(NT\$(\d+)\)/);
-        if (match) {
-          totalQty += parseInt(match[2], 10);
-          return {
-            type: "box",
-            layout: "horizontal",
-            contents: [
-              { type: "text", text: match[1], flex: 4, size: "sm", color: "#4a423a" },
-              { type: "text", text: `× ${match[2]}`, flex: 1, align: "center", size: "sm", color: "#6b513e" },
-              { type: "text", text: `$${match[3]}`, flex: 1, align: "end", size: "sm", color: "#6b513e", weight: "bold" }
-            ]
-          };
-        }
-        return null;
-      }).filter(item => item !== null);
+    const flexMessage = buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, totalAmount);
 
-      const bodyContents = [];
-      bodyContents.push(
-        { type: "text", text: "🍱 日和便當 · 手作餐盒", weight: "bold", size: "lg", color: "#6b513e" },
-        { type: "text", text: "餐盒預購明細", color: "#a88367", size: "sm" },
-        { type: "separator", margin: "md", color: "#e8e2d8" }
-      );
-      itemContents.forEach((item) => { bodyContents.push(item); });
-      bodyContents.push(
-        { type: "separator", margin: "md", color: "#e8e2d8" },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: `共 ${totalQty} 份`, size: "sm", color: "#6b513e", flex: 2 },
-            { type: "text", text: `NT$${total}`, size: "lg", color: "#6b513e", weight: "bold", align: "end" }
-          ]
-        },
-        { type: "separator", margin: "md", color: "#e8e2d8" },
-        { type: "text", text: `姓名：${name}`, size: "sm", color: "#4a423a" },
-        { type: "text", text: `電話：${phone}`, size: "sm", color: "#4a423a" }
-      );
-      if (memberPhone) {
-        bodyContents.push({ type: "text", text: `會員電話：${memberPhone}`, size: "sm", color: "#4a423a" });
-      }
-      bodyContents.push(
-        { type: "text", text: `取貨：${date} ${time}`, size: "sm", color: "#4a423a" }
-      );
-      if (note) {
-        bodyContents.push({ type: "text", text: `備註：${note}`, size: "sm", color: "#8c8275" });
-      }
-      bodyContents.push(
-        { type: "separator", margin: "md", color: "#e8e2d8" },
-        { type: "text", text: "感謝您的訂購 ❤️", align: "center", size: "sm", color: "#a88367" }
-      );
+    // 發送卡片
+    await liff.sendMessages([flexMessage]);
 
-      return {
-        type: "flex",
-        altText: `日和便當訂單 - 總計 $${total}`,
-        contents: {
-          type: "bubble",
-          body: {
-            type: "box",
-            layout: "vertical",
-            contents: bodyContents
-          },
-          footer: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              { type: "text", text: "📋 訂單已成立", size: "xs", color: "#aaaaaa", align: "center" }
-            ]
-          }
-        }
-      };
-    }
+    alert('✅ 訂單卡片已成功傳送！');
 
-    // ============================================================
-    // ⭐ 發送卡片
-    // ============================================================
-    async function sendToLine() {
-      const name = document.getElementById('name').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const memberPhone = document.getElementById('member-phone').value.trim();
-      const date = document.getElementById('pickup-date').value;
-      const time = document.getElementById('pickup-time').value;
-      const note = document.getElementById('note').value.trim();
+    // 清空表單
+    document.querySelectorAll('.qty-number').forEach(el => el.innerText = '0');
+    calculateTotal();
+    document.getElementById('name').value = '';
+    document.getElementById('phone').value = '';
+    document.getElementById('member-phone').value = '';
+    document.getElementById('note').value = '';
+    document.getElementById('same-as-phone').checked = false;
+    document.getElementById('member-phone').disabled = false;
+    document.getElementById('member-phone').style.opacity = '1';
 
-      if (!name || !phone || !date || !time) {
-        alert('請完整填寫訂購人資訊與預計取餐時間！');
-        return;
-      }
-
-      let orderItems = "";
-      const cards = document.querySelectorAll('.product-card');
-      cards.forEach(card => {
-        const index = parseInt(card.dataset.index, 10);
-        const qty = parseInt(card.querySelector('.qty-number').innerText, 10);
-        if (qty > 0 && !isNaN(index) && products[index]) {
-          orderItems += `🍱 ${products[index].title} x ${qty} (NT$${products[index].price * qty})\n`;
-        }
-      });
-
-      if (!orderItems) {
-        alert('請至少選擇一款餐盒數量！');
-        return;
-      }
-
-      const totalAmount = document.getElementById('total-amount').innerText;
-      const btn = document.getElementById('sendOrderBtn');
-      btn.disabled = true;
-      btn.innerText = '⏳ 傳送中...';
-
-      try {
-        if (!liffReady) {
-          alert('請稍候，LIFF 尚未初始化完成！');
-          btn.disabled = false;
-          btn.innerText = '📤 送出餐盒預訂 (LINE)';
-          return;
-        }
-
-        if (!liff.isLoggedIn()) {
-          alert('請先登入 LINE！');
-          liff.login();
-          btn.disabled = false;
-          btn.innerText = '📤 送出餐盒預訂 (LINE)';
-          return;
-        }
-
-        // 檢查是否在 LINE 內
-        if (!liff.isInClient()) {
-          alert('請在 LINE 應用程式內開啟此頁面！');
-          btn.disabled = false;
-          btn.innerText = '📤 送出餐盒預訂 (LINE)';
-          return;
-        }
-
-        // 建立 Flex Message 卡片
-        const flexMessage = buildFlexMessage(name, phone, memberPhone, date, time, note, orderItems, totalAmount);
-
-        // 發送卡片到當前聊天室（哈囉食堂官方帳號聊天室）
-        await liff.sendMessages([flexMessage]);
-
-        alert('✅ 訂單卡片已成功傳送到「哈囉食堂」聊天室！');
-
-        // 清空表單
-        document.querySelectorAll('.qty-number').forEach(el => el.innerText = '0');
-        calculateTotal();
-        document.getElementById('name').value = '';
-        document.getElementById('phone').value = '';
-        document.getElementById('member-phone').value = '';
-        document.getElementById('note').value = '';
-        document.getElementById('same-as-phone').checked = false;
-        document.getElementById('member-phone').disabled = false;
-        document.getElementById('member-phone').style.opacity = '1';
-
-      } catch (error) {
-        console.error('❌ 發送失敗:', error);
-
-        // 顯示詳細錯誤資訊
-        let errorMsg = '發送失敗！\n';
-        if (error.message) {
-          errorMsg += '錯誤訊息：' + error.message + '\n';
-        }
-        if (error.code) {
-          errorMsg += '錯誤代碼：' + error.code + '\n';
-        }
-        errorMsg += '\n請確認：\n1. 是否在 LINE 內開啟\n2. LIFF 權限是否有 chat_message.write';
-
-        alert(errorMsg);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = '📤 送出餐盒預訂 (LINE)';
-      }
-    }
-
-    window.onload = init;
-  </script>
-</body>
-</html>
+  } catch (error) {
+    console.error('❌ 發送失敗:', error);
+    alert('❌ 發送失敗！\n錯誤訊息：' + (error.message || '未知錯誤') + '\n\n請截圖這個畫面給開發者。');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = '📤 送出餐盒預訂 (LINE)';
+  }
+}
