@@ -385,13 +385,13 @@
 
   <div class="summary-box">
     <div class="total-price">總金額：NT$<span id="totalAmount">0</span></div>
-    <button class="btn-submit" id="sendOrderBtn" onclick="sendToLine()">送出餐盒預訂 (LINE)</button>
+    <button class="btn-submit" id="sendOrderBtn" onclick="sendToLine()">📤 送出餐盒預訂</button>
     <div class="liff-status" id="liffStatus">⏳ LIFF 初始化中...</div>
   </div>
 
   <script>
     // ============================================================
-    // 設定區
+    // 🔐 設定區（已固定，不要修改）
     // ============================================================
     const ADMIN_PASSWORD = "55688";
     const LIFF_ID = "2011112664-2890MrID";
@@ -423,7 +423,7 @@
     let clickCount = 0;
     let clickTimer = null;
     let liffReady = false;
-    let userProfile = null;
+    let liffInitialized = false;
     let retryCount = 0;
     const MAX_RETRY = 3;
 
@@ -450,24 +450,30 @@
     }
 
     // ============================================================
-    // LIFF 初始化（修正版）
+    // LIFF 初始化（最終修正版）
     // ============================================================
     function initLIFF() {
       const statusEl = document.getElementById('liffStatus');
-      statusEl.innerText = '⏳ LIFF 初始化中...';
+
+      // 如果已經初始化成功，跳過
+      if (liffInitialized && liffReady) {
+        statusEl.innerText = '✅ 已就緒';
+        statusEl.className = 'liff-status success';
+        return;
+      }
+
+      statusEl.innerText = '⏳ 連線中...';
       statusEl.className = 'liff-status';
 
       // 檢查是否在 LINE 環境
-      const isInLINE = navigator.userAgent.includes('LINE');
-      console.log('是否在 LINE 內:', isInLINE);
+      const isLINE = navigator.userAgent.indexOf('LINE') !== -1;
+      console.log('是否在 LINE 內:', isLINE);
 
-      liff.init({
-          liffId: LIFF_ID,
-          withLoginOnExternalBrowser: true
-        })
+      liff.init({ liffId: LIFF_ID })
         .then(() => {
-          console.log('LIFF 初始化成功');
+          console.log('✅ LIFF 初始化成功');
           liffReady = true;
+          liffInitialized = true;
 
           if (!liff.isLoggedIn()) {
             statusEl.innerText = '🔑 請登入 LINE';
@@ -476,31 +482,29 @@
             return;
           }
 
-          // 取得用戶資料
-          return liff.getProfile().then(profile => {
-            userProfile = profile;
-            console.log('✅ 用戶資料:', profile);
-            statusEl.innerText = '✅ 已就緒，可直接傳送訂單！';
-            statusEl.className = 'liff-status success';
-          }).catch(err => {
-            console.warn('取得用戶資料失敗，但 LIFF 已就緒:', err);
-            statusEl.innerText = '✅ LIFF 已就緒';
-            statusEl.className = 'liff-status success';
-            liffReady = true;
-          });
+          // 嘗試取得用戶資料
+          liff.getProfile()
+            .then(profile => {
+              console.log('✅ 用戶:', profile.displayName);
+              statusEl.innerText = '✅ 已就緒，可直接傳送訂單！';
+              statusEl.className = 'liff-status success';
+            })
+            .catch(() => {
+              statusEl.innerText = '✅ 已就緒';
+              statusEl.className = 'liff-status success';
+            });
         })
         .catch((err) => {
           console.error('❌ LIFF 初始化失敗:', err);
 
-          // 重試機制
           if (retryCount < MAX_RETRY) {
             retryCount++;
-            statusEl.innerText = '⏳ 重新初始化中... (' + retryCount + '/' + MAX_RETRY + ')';
+            statusEl.innerText = '⏳ 重新連線... (' + retryCount + '/' + MAX_RETRY + ')';
             setTimeout(initLIFF, 1500);
             return;
           }
 
-          statusEl.innerText = '❌ LIFF 初始化失敗，請重新開啟頁面';
+          statusEl.innerText = '⚠️ 請重新開啟頁面';
           statusEl.className = 'liff-status error';
           liffReady = false;
         });
@@ -554,7 +558,7 @@
       input.value = '';
       renderTimeSlots();
       populateTimeSelect();
-      alert('時段已新增！');
+      alert('✅ 時段已新增！');
     }
 
     function deleteTimeSlot(index) {
@@ -563,7 +567,7 @@
         localStorage.setItem('bento_timeslots', JSON.stringify(timeSlots));
         renderTimeSlots();
         populateTimeSelect();
-        alert('時段已刪除！');
+        alert('✅ 時段已刪除！');
       }
     }
 
@@ -615,13 +619,13 @@
         alert('您已處於管理者登入狀態！');
         return;
       }
-      const inputPwd = prompt('請輸入管理者驗證密碼：');
+      const inputPwd = prompt('🔐 請輸入管理者驗證密碼：');
       if (inputPwd === ADMIN_PASSWORD) {
         sessionStorage.setItem('is_admin', 'true');
         checkAdminStatus();
-        alert('驗證成功！已開啟管理者功能。');
+        alert('✅ 驗證成功！已開啟管理者功能。');
       } else if (inputPwd !== null) {
-        alert('密碼錯誤！');
+        alert('❌ 密碼錯誤！');
       }
     }
 
@@ -643,7 +647,7 @@
       if (!text) { alert('公告內容不可為空！'); return; }
       localStorage.setItem('bento_notice', text);
       document.getElementById('noticeDisplay').innerText = text;
-      alert('公告已更新！');
+      alert('✅ 公告已更新！');
     }
 
     // ============================================================
@@ -665,15 +669,15 @@
               <div class="product-bottom">
                 <span class="product-price">NT$${prod.price}</span>
                 <div class="quantity-control">
-                  <button type="button" class="btn-qty" onclick="updateQty(this, -1)">-</button>
+                  <button type="button" class="btn-qty" onclick="updateQty(this, -1)">−</button>
                   <span class="qty-number">0</span>
                   <button type="button" class="btn-qty" onclick="updateQty(this, 1)">+</button>
                 </div>
               </div>
               ${isAdmin ? `
                 <div class="admin-actions">
-                  <button type="button" class="btn-admin-action btn-edit" onclick="editProduct(${index})">編輯</button>
-                  <button type="button" class="btn-admin-action btn-delete" onclick="deleteProduct(${index})">刪除</button>
+                  <button type="button" class="btn-admin-action btn-edit" onclick="editProduct(${index})">✏️ 編輯</button>
+                  <button type="button" class="btn-admin-action btn-delete" onclick="deleteProduct(${index})">🗑️ 刪除</button>
                 </div>
               ` : ''}
             </div>
@@ -710,7 +714,7 @@
         localStorage.setItem('bento_products', JSON.stringify(products));
         renderProducts();
         resetAdminForm();
-        alert('商品已儲存！');
+        alert('✅ 商品已儲存！');
       };
       if (imgInput.files && imgInput.files[0]) {
         const reader = new FileReader();
@@ -735,7 +739,7 @@
       document.getElementById('inputDesc').value = prod.desc;
       document.getElementById('inputPrice').value = prod.price;
       document.getElementById('editIndex').value = index;
-      document.getElementById('adminFormTitle').innerText = "編輯餐盒品項";
+      document.getElementById('adminFormTitle').innerText = "✏️ 編輯餐盒品項";
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -745,7 +749,7 @@
       document.getElementById('inputPrice').value = "";
       document.getElementById('inputImg').value = "";
       document.getElementById('editIndex').value = "-1";
-      document.getElementById('adminFormTitle').innerText = "新增餐盒品項";
+      document.getElementById('adminFormTitle').innerText = "➕ 新增餐盒品項";
     }
 
     // ============================================================
@@ -787,7 +791,7 @@
             layout: "horizontal",
             contents: [
               { type: "text", text: match[1], flex: 4, size: "sm", color: "#4a423a" },
-              { type: "text", text: "x " + match[2], flex: 1, align: "center", size: "sm",
+              { type: "text", text: "× " + match[2], flex: 1, align: "center", size: "sm",
               color: "#6b513e" },
               { type: "text", text: "$" + match[3], flex: 1, align: "end", size: "sm", color: "#6b513e",
                 weight: "bold" }
@@ -798,7 +802,7 @@
       }).filter(item => item !== null);
 
       const bodyContents = [];
-      bodyContents.push({ type: "text", text: "日和便當 · 手作餐盒", weight: "bold", size: "lg",
+      bodyContents.push({ type: "text", text: "🍱 日和便當 · 手作餐盒", weight: "bold", size: "lg",
         color: "#6b513e" });
       bodyContents.push({ type: "text", text: "餐盒預購明細", color: "#a88367", size: "sm" });
       bodyContents.push({ type: "separator", margin: "md", color: "#e8e2d8" });
@@ -813,14 +817,14 @@
         ]
       });
       bodyContents.push({ type: "separator", margin: "md", color: "#e8e2d8" });
-      bodyContents.push({ type: "text", text: "姓名：" + name, size: "sm", color: "#4a423a" });
-      bodyContents.push({ type: "text", text: "電話：" + phone, size: "sm", color: "#4a423a" });
+      bodyContents.push({ type: "text", text: "👤 姓名：" + name, size: "sm", color: "#4a423a" });
+      bodyContents.push({ type: "text", text: "📞 電話：" + phone, size: "sm", color: "#4a423a" });
       if (memberPhone) {
-        bodyContents.push({ type: "text", text: "會員電話：" + memberPhone, size: "sm", color: "#4a423a" });
+        bodyContents.push({ type: "text", text: "⭐ 會員電話：" + memberPhone, size: "sm", color: "#4a423a" });
       }
-      bodyContents.push({ type: "text", text: "取貨：" + date + " " + time, size: "sm", color: "#4a423a" });
+      bodyContents.push({ type: "text", text: "📅 取貨：" + date + " " + time, size: "sm", color: "#4a423a" });
       if (note) {
-        bodyContents.push({ type: "text", text: "備註：" + note, size: "sm", color: "#8c8275" });
+        bodyContents.push({ type: "text", text: "📝 備註：" + note, size: "sm", color: "#8c8275" });
       }
       bodyContents.push({ type: "separator", margin: "md", color: "#e8e2d8" });
       bodyContents.push({ type: "text", text: "感謝您的訂購 ❤️", align: "center", size: "sm", color: "#a88367" });
@@ -847,7 +851,7 @@
     }
 
     // ============================================================
-    // 發送訂單
+    // 📤 發送訂單（最終版）
     // ============================================================
     async function sendToLine() {
       const name = document.getElementById('name').value.trim();
@@ -881,21 +885,29 @@
       const totalAmount = document.getElementById('totalAmount').innerText;
       const btn = document.getElementById('sendOrderBtn');
       btn.disabled = true;
-      btn.innerText = '傳送中...';
+      btn.innerText = '⏳ 傳送中...';
 
       try {
+        // 如果 LIFF 還沒初始化完成，等待一下
         if (!liffReady) {
-          alert('LIFF 尚未就緒，請稍後再試！');
-          btn.disabled = false;
-          btn.innerText = '送出餐盒預訂 (LINE)';
-          return;
+          // 嘗試重新初始化
+          await new Promise((resolve) => {
+            initLIFF();
+            setTimeout(resolve, 2000);
+          });
+          if (!liffReady) {
+            alert('⚠️ LIFF 尚未就緒，請重新開啟頁面！');
+            btn.disabled = false;
+            btn.innerText = '📤 送出餐盒預訂';
+            return;
+          }
         }
 
         if (!liff.isLoggedIn()) {
-          alert('請先登入 LINE！');
+          alert('🔑 請先登入 LINE！');
           liff.login();
           btn.disabled = false;
-          btn.innerText = '送出餐盒預訂 (LINE)';
+          btn.innerText = '📤 送出餐盒預訂';
           return;
         }
 
@@ -905,6 +917,7 @@
 
         alert('✅ 訂單已成功傳送！');
 
+        // 清空表單
         document.querySelectorAll('.qty-number').forEach(el => el.innerText = '0');
         calculateTotal();
         document.getElementById('name').value = '';
@@ -916,15 +929,17 @@
         document.getElementById('memberPhone').style.opacity = '1';
 
       } catch (error) {
-        console.error('發送失敗:', error);
+        console.error('❌ 發送失敗:', error);
         alert('❌ 發送失敗！\n錯誤訊息：' + (error.message || '未知錯誤'));
       } finally {
         btn.disabled = false;
-        btn.innerText = '送出餐盒預訂 (LINE)';
+        btn.innerText = '📤 送出餐盒預訂';
       }
     }
 
-    // 頁面載入
+    // ============================================================
+    // 🚀 啟動
+    // ============================================================
     window.onload = init;
   </script>
 </body>
