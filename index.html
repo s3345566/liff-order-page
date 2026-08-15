@@ -391,10 +391,10 @@
 
   <script>
     // ============================================================
-    // 🔐 設定區（已固定，不要修改）
+    // 🔐 設定區（已更新新的 LIFF ID）
     // ============================================================
     const ADMIN_PASSWORD = "55688";
-    const LIFF_ID = "2011112664-2890MrID";
+    const LIFF_ID = "2011112664-nmazXXYX";
 
     // ============================================================
     // 預設資料
@@ -450,12 +450,11 @@
     }
 
     // ============================================================
-    // LIFF 初始化（最終修正版）
+    // LIFF 初始化
     // ============================================================
     function initLIFF() {
       const statusEl = document.getElementById('liffStatus');
 
-      // 如果已經初始化成功，跳過
       if (liffInitialized && liffReady) {
         statusEl.innerText = '✅ 已就緒';
         statusEl.className = 'liff-status success';
@@ -464,10 +463,6 @@
 
       statusEl.innerText = '⏳ 連線中...';
       statusEl.className = 'liff-status';
-
-      // 檢查是否在 LINE 環境
-      const isLINE = navigator.userAgent.indexOf('LINE') !== -1;
-      console.log('是否在 LINE 內:', isLINE);
 
       liff.init({ liffId: LIFF_ID })
         .then(() => {
@@ -482,7 +477,6 @@
             return;
           }
 
-          // 嘗試取得用戶資料
           liff.getProfile()
             .then(profile => {
               console.log('✅ 用戶:', profile.displayName);
@@ -851,7 +845,7 @@
     }
 
     // ============================================================
-    // 📤 發送訂單（最終版）
+    // 📤 發送訂單
     // ============================================================
     async function sendToLine() {
       const name = document.getElementById('name').value.trim();
@@ -888,9 +882,7 @@
       btn.innerText = '⏳ 傳送中...';
 
       try {
-        // 如果 LIFF 還沒初始化完成，等待一下
         if (!liffReady) {
-          // 嘗試重新初始化
           await new Promise((resolve) => {
             initLIFF();
             setTimeout(resolve, 2000);
@@ -917,7 +909,6 @@
 
         alert('✅ 訂單已成功傳送！');
 
-        // 清空表單
         document.querySelectorAll('.qty-number').forEach(el => el.innerText = '0');
         calculateTotal();
         document.getElementById('name').value = '';
